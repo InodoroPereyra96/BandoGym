@@ -1536,3 +1536,89 @@ elemento sin función real en esa pantalla (el título). Mantener el pedido de
 ("moverla al zócalo inferior"), evita agregarle una responsabilidad nueva a
 `.tabbar` (que ya identifica la pantalla activa con el tab resaltado) solo
 para relocalizar un texto que no hace falta en ningún lado.
+
+## 40. Logo real (Atlas con bandoneón) reemplaza el ícono placeholder de fuelles
+
+**Pedido:** el usuario aportó un logo ya ilustrado (un Atlas sosteniendo un
+bandoneón en vez del mundo, sobre una insignia dorada con fondo azul marino y
+ondas concéntricas) para que sea el ícono que aparece en la pantalla de
+inicio del teléfono al instalar la PWA, pidiendo explícitamente sacarle el
+fondo si hacía falta.
+
+**Problema del archivo tal cual vino:** la imagen (512×512, generada por IA)
+no era un ícono "de borde a borde" sino una insignia con esquinas ya
+redondeadas y borde dorado, centrada sobre un margen plano color crema que
+ocupaba buena parte del lienzo. Usar ese archivo tal cual como ícono hubiera
+dado un resultado de "cuadrado redondeado dentro de otro cuadrado
+redondeado" (el propio del sistema operativo, aplicado sobre uno que ya
+traía el suyo), con un marco crema visible alrededor — el pedido explícito de
+"quitarle el fondo" apuntaba justamente a esto.
+
+**Decisión — pipeline de 2 pasos, reemplazando por completo el generador
+geométrico anterior (`New-BandoneonIcon`, que dibujaba fuelles con
+polígonos):**
+1. **Recorte de fondo por flood fill** (`Remove-FlatBackground` en
+   `scripts/make-icons.ps1`): en vez de un chroma-key ingenuo (reemplazar
+   todo píxel "parecido al fondo" en toda la imagen, lo que hubiera borrado
+   por error tonos crema que también aparecen DENTRO de la ilustración,
+   como un brillo/resplandor cerca del centro), se hace flood fill a partir
+   de los 4 bordes del lienzo: solo se vacía el fondo que está *conectado*
+   al borde exterior, así cualquier tono similar encerrado dentro de la
+   insignia queda intacto sin necesitar detectarlo como caso especial. Con
+   tolerancia baja (25) quedaba un halo de píxels antialiased sin limpiar y
+   la sombra proyectada de la insignia (pensada para verse sobre crema)
+   sobrevivía como una mancha clara sin sentido sobre fondo oscuro; subir la
+   tolerancia a 48 fue suficiente para que el flood fill se "comiera" tanto
+   el halo como esa sombra sin llegar a tocar el borde dorado real (la
+   distancia de color entre el crema de fondo y el dorado del borde es
+   >80 en el canal azul, muy por encima del umbral). El resultado (fondo
+   transparente, recortado a la caja delimitadora de lo que quedó opaco) se
+   guarda como `icons/logo-cutout.png`, un activo reutilizable versionado
+   junto con `icons/logo-original.png` (la imagen tal cual la subió el
+   usuario) — así todo el proceso es reproducible sin depender de ningún
+   archivo fuera del repo.
+2. **Composición sobre fondo sólido** (`New-FlatIcon`): en vez de dejar el
+   PNG con transparencia (iOS no la soporta bien en el ícono de la app: la
+   aplana contra negro), cada tamaño se compone sobre un lienzo azul marino
+   (`RGB(9,16,32)`, tomado del propio interior de la insignia) — así el
+   relleno de las esquinas que la insignia redondeada deja libres es
+   prácticamente invisible, en vez de crear un marco de color distinto. Los
+   íconos normales (512/192/180/32) usan el contenido casi de borde a borde
+   (98%) porque la insignia ya trae su propio margen/redondeo; el maskable
+   (512, `contentFraction` 0.72) deja mucho más aire alrededor porque
+   Android puede recortarlo en círculo, y con el bandoneón/manos llegando
+   casi al borde un recorte circular sin ese margen extra se los hubiera
+   comido.
+
+**Por qué reemplazar el script entero y no solo los PNG:** los íconos
+anteriores eran 100% generados por código (`New-BandoneonIcon`) — no existía
+ningún archivo fuente que regenerarlos dependiera de conservar. Ahora que la
+fuente es una imagen real, dejar el generador geométrico viejo en
+`make-icons.ps1` hubiera sido código muerto y, peor, engañoso (alguien podría
+correrlo pensando que regenera el logo actual y en cambio hubiera vuelto a
+dibujar fuelles genéricos, pisando el logo real). Consolidar todo el pipeline
+nuevo (recorte + composición) en el mismo script, parametrizado por tamaño/
+fracción de contenido/color de fondo, deja un solo lugar para volver a
+generar todo si el usuario trae una versión distinta del logo — alcanza con
+reemplazar `icons/logo-original.png` y volver a correr el script.
+
+**Verificado visualmente** (no solo corriendo el script sin errores): se
+inspeccionó cada PNG generado (512, 192, 180, 32 y el maskable) — el halo y
+la mancha de sombra desaparecieron con el umbral ajustado, el ícono se lee
+bien incluso a 192px, y a 32px (favicon) sigue siendo reconocible como una
+insignia dorada aunque se pierda el detalle fino del grabado. Se corrió
+`make-icons.ps1` una segunda vez de punta a punta para confirmar que el
+recorte da exactamente la misma caja delimitadora (406×416) que durante el
+ajuste manual del umbral, antes de dejarlo como versión definitiva.
+
+**Nota (fuera del alcance de este cambio):** los archivos de manifest/HTML
+que referencian estas rutas (`manifest.webmanifest`, `index.html`) no
+necesitaron tocarse — ya apuntaban a `icons/icon-*.png` por nombre de
+archivo, y este cambio reemplaza el contenido de esos mismos archivos sin
+renombrarlos. Lo que sí hace falta para verlo reflejado en un ícono ya
+agregado a la pantalla de inicio de iOS: **borrar el ícono existente y
+volver a agregarlo desde Safari** — a diferencia del resto de la PWA (HTML/
+CSS/JS, servidos por el service worker y actualizables in-place, ver punto
+"Bump CACHE_NAME"), iOS captura una instantánea del ícono en el momento de
+"Agregar a pantalla de inicio" y no la vuelve a consultar después, así que
+publicar un manifest nuevo no alcanza para actualizar un ícono ya instalado.
