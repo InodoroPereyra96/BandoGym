@@ -1,7 +1,7 @@
 // Service worker básico: cachea el app shell para que la PWA funcione
 // offline (no hay llamadas a backend, todo el contenido vive en el bundle).
 
-const CACHE_NAME = 'fuelle-v8';
+const CACHE_NAME = 'bandogym-v9';
 
 const APP_SHELL = [
   './',
