@@ -1281,6 +1281,25 @@ body.is-player .app-shell {
   body.is-player .btn-sm { min-height: clamp(30px, 5vh, 44px); }
 }
 
+/* ---------- Topbar/tabbar más chicas en Práctica horizontal (ver DECISIONES.md punto 39) ----------
+   Siguen visibles (decisión previa, punto 35: `.tabbar` deja disponible
+   navegar a otra pantalla sin salir de Práctica, y `.topbar` conserva el
+   botón "Volver"), pero en horizontal le sacan al alto real de `.screen`
+   espacio que el reproductor necesita más — partitura + controles. El
+   título "Práctica" no cumple ninguna función ahí (la pantalla ya se
+   identifica por su contenido) así que se oculta entero en vez de solo
+   achicarse. */
+@media (orientation: landscape) {
+  body.is-player .topbar-inner { min-height: 0; padding: clamp(2px, 0.8vh, 8px) 10px; }
+  body.is-player .topbar-title,
+  body.is-player .topbar-spacer { display: none; }
+  body.is-player .back-btn { width: clamp(30px, 5.5vh, 44px); height: clamp(30px, 5.5vh, 44px); }
+
+  body.is-player .tab-btn { padding: clamp(2px, 0.6vh, 8px) 4px clamp(2px, 0.5vh, 6px); min-height: 0; gap: 1px; }
+  body.is-player .tab-icon { font-size: clamp(0.85rem, 2vh, 1.3rem); }
+  body.is-player .tab-label { font-size: clamp(0.55rem, 1vh, 0.72rem); }
+}
+
 /* ---------- Perfil ---------- */
 
 .level-card {

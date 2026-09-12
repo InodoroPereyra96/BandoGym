@@ -1486,3 +1486,53 @@ borraron de `localStorage` al terminar de verificar (junto con el estado de
 "Hoy" para que se regenere) para no dejar datos de prueba mezclados con el
 contenido real del usuario; el nivel de perfil (estaba en "avanzado" antes
 de la prueba) se restauró a ese mismo valor.
+
+## 39. Topbar/tabbar más chicas y sin título en Práctica horizontal; chips de modo de avance más cortos
+
+**Pedido (probado en iPhone real, no en el navegador de escritorio):**
+verificado el punto 17 (horizontal solo en Práctica) contra un iPhone físico
+— algo que este entorno de automatización no puede hacer, ver punto 33 —
+apareció una queja de proporción: `.topbar` (con el título "Práctica") y
+`.tabbar` conservan la misma altura que en el resto de la app (fijada en
+`px`, pensada para vertical), sin achicarse en horizontal pese a que el
+punto 35 ya había optimizado con `clamp(vh)` prácticamente todo el resto del
+panel lateral para ese mismo objetivo (partitura + controles siempre a la
+vista, sin scroll). El pedido puntual: reducir ambas barras, sacar la
+palabra "Práctica" (no cumple ninguna función — la pantalla ya se identifica
+por su contenido) y en el selector de modo de avance acortar las etiquetas a
+"Auto (metrónomo)" / "Manual", cambiando el emoji de pie (🦶) por uno de
+mano (✋).
+
+**Decisión:**
+- `body.is-player .topbar-inner`/`.tab-btn` pasan a `clamp(vh)` en vez de los
+  valores fijos de la regla base, mismo patrón que ya usa todo `.player-side`
+  desde el punto 35 — se achican solos en pantallas bajas en vez de comerse
+  altura fija. Scopeado a horizontal + `body.is-player` (misma clase del
+  punto 17): el resto de las pantallas y la Práctica en vertical no cambian.
+- `.topbar-title`/`.topbar-spacer` se ocultan enteras (no solo se achica la
+  fuente) en ese mismo alcance: el hint de texto no aportaba nada aquí y
+  sacarlo entero, en vez de dejarlo en tamaño mínimo, es lo que de verdad le
+  devuelve esa altura a `.screen`. El botón "Volver" queda solo, encogido con
+  `clamp()` como el resto de los íconos de Práctica.
+- No se tocó `app.js` ni la lógica que decide qué pantallas muestran topbar/
+  tabbar (siguen siendo las mismas de siempre, ver punto 35) — el cambio es
+  puramente de tamaño/visibilidad vía CSS, así que no hay riesgo de romper la
+  navegación ni el cálculo de alturas encadenado que ya corrige el punto 35
+  (`.topbar`/`.tabbar` más chicas solo le dejan MÁS espacio a `.screen`,
+  nunca menos).
+- `player.js`: los chips de `#modePicker` pasan de "🎵 Automático
+  (metrónomo)" / "🦶 Manual (pedal / teclado / toque)" a "🎵 Auto
+  (metrónomo)" / "✋ Manual". El texto largo del modo manual era redundante
+  con el hint fijo que ya aparece debajo (`#manualHint`, ver punto 32) al
+  activarlo, que explica el detalle de pedal/teclado/toque — acortar el chip
+  no pierde información, solo la deja de duplicar en dos lugares a la vez.
+
+**Por qué:** el punto 35 ya había establecido el patrón correcto (achicar
+con `clamp(vh)`, no ocultar contenido funcional) para todo lo que SÍ cumple
+una función en Práctica; acá se extiende ese mismo patrón a topbar/tabbar, y
+se aplica la otra herramienta disponible (ocultar del todo) solo al único
+elemento sin función real en esa pantalla (el título). Mantener el pedido de
+"sacarla" tal cual, en vez de la alternativa que también se había evaluado
+("moverla al zócalo inferior"), evita agregarle una responsabilidad nueva a
+`.tabbar` (que ya identifica la pantalla activa con el tab resaltado) solo
+para relocalizar un texto que no hace falta en ningún lado.

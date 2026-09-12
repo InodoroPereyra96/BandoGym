@@ -259,8 +259,8 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
         <div class="config-block config-block-solo" id="modeBlock">
           <div class="config-label">Modo de avance</div>
           <div class="chip-row chip-row-center" id="modePicker">
-            <button type="button" class="chip" data-mode="auto">🎵 Automático (metrónomo)</button>
-            <button type="button" class="chip" data-mode="manual">🦶 Manual (pedal / teclado / toque)</button>
+            <button type="button" class="chip" data-mode="auto">🎵 Auto (metrónomo)</button>
+            <button type="button" class="chip" data-mode="manual">✋ Manual</button>
           </div>
         </div>
 
