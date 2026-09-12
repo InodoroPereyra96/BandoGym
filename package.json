@@ -1,0 +1,13 @@
+{
+  "name": "bandogym",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Prototipo de PWA para práctica diaria de bandoneón (frontend, sin backend).",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js 5173"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

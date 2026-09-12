@@ -1,0 +1,800 @@
+// Reproductor de práctica: la pantalla clave.
+// - Ejercicios de escala/arpegio: en modo automático avanza de paso en paso
+//   (cada paso = una imagen, ej. "La menor abriendo", con su PROPIA cantidad
+//   de compases — ver DECISIONES.md ronda 6, punto 34) en sincronía con el
+//   metrónomo (BPM/compás/acento/cuenta de anticipación configurables); en
+//   modo manual el avance lo controla el usuario con pedal Bluetooth/
+//   teclado/toque sobre mitad derecha (avanza) o izquierda (retrocede) de la
+//   partitura, sin metrónomo ni tiempo (ver DECISIONES.md puntos 32 y 36).
+//   Además: audio de demostración opcional por paso/velocidad, zoom/pantalla
+//   completa de la partitura con normalización automática de tamaño visual
+//   entre pasos (punto 31), cuadraditos de progreso tocables para saltar
+//   directo a un paso (punto 35) y, en horizontal, layout compacto sin
+//   scroll vertical con ajustes secundarios colapsables (punto 35).
+// - Ejercicios de fuelle (principiante): temporizador simple de práctica.
+// En ambos casos termina con la calificación "me costó / normal / bien".
+//
+// Ver DECISIONES.md puntos 14 (pasos en vez de tonalidades), 15 (Arpegios
+// menores), 17 (horizontal), 18 (zoom/fullscreen), 19 (metrónomo), 20
+// (audio), 23-27 (ronda 3: compás, sincronización, volumen, acento,
+// cuenta de anticipación), 30-32 (ronda 4: centrado vertical,
+// normalización de tamaño y modo manual), 33 (ronda 5: corrección de la
+// normalización de tamaño, que quedaba achicando la imagen en vez de
+// maximizarla) y 34-36 (ronda 6: 34 compases por paso, 35 sin scroll
+// vertical en horizontal + pasos tocables con resincronización, 36 toque
+// bidireccional).
+
+import * as store from '../store.js';
+import { tiemposPorCompas, pasoCompases } from '../data.js';
+import { scorePlaceholderSVG, formatMMSS, computeContentTransform, escapeHTML } from '../util.js';
+import { NIVEL_LABEL, ARTICULACION_LABEL, BPM_OPTIONS, ACENTO_OPTIONS, GRUPO_ARPEGIOS_MENORES, NOMBRE_GRUPO_ARPEGIOS_MENORES } from '../theory.js';
+import { toast } from '../ui.js';
+import { createMetronome } from '../metronome.js';
+import { attachPinchZoom } from '../zoom.js';
+
+let cleanupFn = null;
+const metronome = createMetronome();
+
+function settingsKey(id) {
+  return `fuelle:playerSettings:v2:${id}`;
+}
+
+/** Acento por defecto: el primer tiempo de cada compás real (ver DECISIONES.md
+ * punto 26 — el usuario puede cambiarlo a cualquier valor 0-9 igual). */
+function defaultSettings(exercise) {
+  const bpm = BPM_OPTIONS.includes(exercise.bpmDefault) ? exercise.bpmDefault : 60;
+  const compas = exercise.compas || '4/4';
+  return {
+    bpm,
+    // Ya NO hay "compases" acá: cada paso trae el suyo propio (ver
+    // DECISIONES.md ronda 6, punto 34) — el reproductor no persiste ningún
+    // valor global de compases.
+    acentoCada: tiemposPorCompas(compas),
+    mode: 'auto', // 'auto' (metrónomo/BPM) o 'manual' (pedal/teclado/toque) — ver DECISIONES.md punto 32
+  };
+}
+
+function loadSettings(exercise) {
+  const defaults = defaultSettings(exercise);
+  try {
+    const raw = localStorage.getItem(settingsKey(exercise.id));
+    if (raw) return { ...defaults, ...JSON.parse(raw) };
+  } catch (e) { /* ignorar */ }
+  return defaults;
+}
+
+function saveSettings(exercise, settings) {
+  try {
+    localStorage.setItem(settingsKey(exercise.id), JSON.stringify(settings));
+  } catch (e) { /* ignorar */ }
+}
+
+export function render(container, { param, query, navigate }) {
+  document.body.classList.add('is-player');
+
+  // Intento best-effort de forzar horizontal (ver DECISIONES.md punto 17):
+  // solo funciona en navegadores/contextos que lo soportan (típicamente PWA
+  // instalada + fullscreen en Android/Chrome); si no está disponible, el
+  // CSS igual se adapta cuando el usuario rota el dispositivo a mano.
+  try {
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('landscape').catch(() => {});
+    }
+  } catch (e) { /* no soportado */ }
+
+  const exercise = store.getExerciseById(param);
+  const fromRoute = query.from === 'biblioteca' ? 'biblioteca' : 'hoy';
+
+  if (!exercise) {
+    container.innerHTML = `
+      <div class="empty-state card">
+        <div class="big-icon">⚠</div>
+        <p>No se encontró este ejercicio. Puede que haya sido reemplazado.</p>
+        <button class="btn btn-primary" id="volver">Volver</button>
+      </div>`;
+    container.querySelector('#volver').addEventListener('click', () => navigate('#/hoy'));
+    return;
+  }
+
+  if (exercise.tipo === 'fuelle') {
+    renderFuelle(container, exercise, fromRoute, navigate);
+  } else {
+    renderEscalaArpegio(container, exercise, fromRoute, navigate);
+  }
+}
+
+export function destroy() {
+  document.body.classList.remove('is-player');
+  metronome.stop();
+  if (cleanupFn) cleanupFn();
+  cleanupFn = null;
+  try {
+    if (document.fullscreenElement) document.exitFullscreen();
+  } catch (e) { /* ignorar */ }
+  try {
+    if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
+  } catch (e) { /* ignorar */ }
+  // Por si se navega afuera del reproductor con la hoja de calificación abierta
+  // (ej. botón atrás del navegador): no debe quedar huérfana sobre otra pantalla.
+  const overlay = document.getElementById('ratingOverlay');
+  if (overlay) overlay.remove();
+}
+
+// ---------------------------------------------------------------------
+// Fuelle: temporizador simple
+// ---------------------------------------------------------------------
+
+function renderFuelle(container, exercise, fromRoute, navigate) {
+  const targetSec = (exercise.duracionEstimadaMin || 4) * 60;
+  let elapsedBefore = 0;
+  let startedAt = null;
+  let playing = false;
+  let intervalId = null;
+
+  const customImg = store.getImageFor(exercise.id);
+
+  container.innerHTML = `
+    <div class="player-wrap">
+      ${customImg ? `<div class="score-frame"><img src="${customImg}" alt="Imagen de referencia de ${exercise.nombre}" /></div>` : ''}
+      <div class="tonalidad-label">
+        <div class="nombre">${exercise.nombre}</div>
+        <div class="sub">${ARTICULACION_LABEL[exercise.articulacion] || ''} · Principiante</div>
+      </div>
+      <p class="subtitle text-center">${exercise.descripcion || ''}</p>
+
+      <div class="timer-circle">
+        <div class="time" id="timeDisplay">00:00</div>
+        <div class="target">objetivo ${formatMMSS(targetSec)}</div>
+      </div>
+
+      <div class="transport">
+        <button class="icon-btn icon-btn-lg" id="playBtn" aria-label="Reproducir / pausar">▶</button>
+      </div>
+
+      <button class="btn btn-wine" id="finishBtn">Terminar y calificar</button>
+    </div>
+  `;
+
+  const timeDisplay = container.querySelector('#timeDisplay');
+  const playBtn = container.querySelector('#playBtn');
+
+  function currentElapsed() {
+    if (!playing) return elapsedBefore;
+    return elapsedBefore + (Date.now() - startedAt) / 1000;
+  }
+
+  function tick() {
+    timeDisplay.textContent = formatMMSS(currentElapsed());
+  }
+
+  function togglePlay() {
+    playing = !playing;
+    if (playing) {
+      startedAt = Date.now();
+      playBtn.textContent = '⏸';
+      intervalId = setInterval(tick, 200);
+    } else {
+      elapsedBefore = currentElapsed();
+      playBtn.textContent = '▶';
+      clearInterval(intervalId);
+    }
+  }
+
+  playBtn.addEventListener('click', togglePlay);
+  container.querySelector('#finishBtn').addEventListener('click', () => {
+    if (playing) togglePlay();
+    showRatingOverlay(exercise, fromRoute, navigate);
+  });
+
+  cleanupFn = () => clearInterval(intervalId);
+}
+
+// ---------------------------------------------------------------------
+// Escala / Arpegio: carrusel de pasos (imagen por tonalidad+dirección)
+// ---------------------------------------------------------------------
+
+function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
+  const pasos = (exercise.pasos || []).slice().sort((a, b) => a.orden - b.orden);
+
+  if (pasos.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state card">
+        <div class="big-icon">🖼</div>
+        <p>Este ejercicio todavía no tiene imágenes cargadas.<br>Agregalas desde "Nuevo ejercicio".</p>
+        <button class="btn btn-primary" id="volver">Volver</button>
+      </div>`;
+    container.querySelector('#volver').addEventListener('click', () => navigate(fromRoute === 'hoy' ? '#/hoy' : '#/biblioteca'));
+    return;
+  }
+
+  const compas = exercise.compas || '4/4';
+  const tiempos = tiemposPorCompas(compas);
+
+  const settings = loadSettings(exercise);
+  let bpm = BPM_OPTIONS.includes(settings.bpm) ? settings.bpm : 60;
+  let acentoCada = Math.min(9, Math.max(0, Math.round(Number(settings.acentoCada))));
+  if (!Number.isFinite(acentoCada)) acentoCada = tiempos;
+
+  let mode = settings.mode === 'manual' ? 'manual' : 'auto'; // ver DECISIONES.md punto 32
+
+  const audioSettings = store.getAudioSettings();
+  let metronomeVolume = audioSettings.metronomeVolume;
+  let demoVolume = audioSettings.demoVolume;
+
+  let index = 0;
+  let playing = false;
+  // Fase del reproductor: 'stopped' (pausado), 'countin' (cuenta de
+  // anticipación sonando, sin avanzar pasos) o 'playing' (avanzando pasos en
+  // sincronía con el metrónomo). Ver DECISIONES.md puntos 24 y 27.
+  let phase = 'stopped';
+  let beatsElapsedInPaso = 0;
+  let countInElapsed = 0;
+
+  // Cuántos tiempos dura un paso / la cuenta de anticipación completa, en
+  // tiempos reales del compás del ejercicio (no siempre 4). Ver DECISIONES.md
+  // punto 23. Los compases del paso actual (no un valor global — ver
+  // DECISIONES.md ronda 6, punto 34) se leen en cada llamada, así que cambian
+  // solos al cambiar de paso sin ningún control aparte.
+  function beatsPerPaso() {
+    const compasesDeEstePaso = pasoCompases(pasos[index], exercise);
+    return Math.max(1, compasesDeEstePaso * tiempos);
+  }
+  function countInBeatsTotal() {
+    return 2 * tiempos; // 2 compases completos de anticipación, ver DECISIONES.md punto 27
+  }
+
+  const esArpegioMenor = exercise.grupoEspecial === GRUPO_ARPEGIOS_MENORES;
+  const subExercise = esArpegioMenor
+    ? `${NOMBRE_GRUPO_ARPEGIOS_MENORES} · ${ARTICULACION_LABEL[exercise.articulacion] || ''} · ${NIVEL_LABEL[exercise.nivel]} · ${compas}`
+    : `${exercise.nombre} · ${NIVEL_LABEL[exercise.nivel]} · ${compas}`;
+
+  container.innerHTML = `
+    <div class="player-wrap escala-arpegio">
+      <div class="score-frame-wrap" id="scoreFrameWrap">
+        <div class="score-frame" id="scoreFrame"></div>
+        <button class="icon-btn score-fs-btn" id="fullscreenBtn" aria-label="Pantalla completa">⛶</button>
+      </div>
+
+      <div class="player-side">
+        <div class="config-block config-block-solo" id="modeBlock">
+          <div class="config-label">Modo de avance</div>
+          <div class="chip-row chip-row-center" id="modePicker">
+            <button type="button" class="chip" data-mode="auto">🎵 Automático (metrónomo)</button>
+            <button type="button" class="chip" data-mode="manual">🦶 Manual (pedal / teclado / toque)</button>
+          </div>
+        </div>
+
+        <div id="autoProgressBlock">
+          <div class="progress-label" id="progressLabel"></div>
+          <div class="progress-segments" id="progressSegments"></div>
+        </div>
+
+        <p class="field-hint manual-hint" id="manualHint" hidden>
+          Modo manual: avanzá con las flechas del teclado, Espacio, Av Pág /
+          Re Pág (así funcionan los pedales Bluetooth de pasar páginas), o
+          tocando la mitad derecha de la partitura para avanzar / la mitad
+          izquierda para retroceder. No suena el metrónomo ni corre el tiempo solo.
+        </p>
+
+        <div class="tonalidad-label">
+          <div class="nombre" id="tonalidadNombre"></div>
+          <div class="sub">${subExercise}</div>
+        </div>
+
+        <div class="progress-dots" id="dots"></div>
+
+        <div class="transport">
+          <button class="icon-btn" id="prevBtn" aria-label="Paso anterior">⏮</button>
+          <button class="icon-btn icon-btn-lg" id="playBtn" aria-label="Reproducir / pausar">▶</button>
+          <button class="icon-btn" id="nextBtn" aria-label="Paso siguiente">⏭</button>
+        </div>
+
+        <div id="autoConfigBlock">
+          <div class="player-config">
+            <div class="config-block">
+              <div class="config-label">Metrónomo (BPM)</div>
+              <div class="bpm-picker" id="bpmPicker">
+                ${BPM_OPTIONS.map((b) => `<button class="bpm-chip ${b === bpm ? 'active' : ''}" data-bpm="${b}">${b}</button>`).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-outline btn-sm advanced-toggle" id="advancedToggle" aria-expanded="false"></button>
+        <div class="advanced-panel" id="advancedPanel" hidden>
+          <div class="config-block config-block-solo" id="acentoBlock">
+            <div class="config-label">Acento cada (0 = sin acento)</div>
+            <div class="chip-row chip-row-center" id="acentoPicker">
+              ${ACENTO_OPTIONS.map((n) => `<button type="button" class="chip ${n === acentoCada ? 'active' : ''}" data-acento="${n}">${n === 0 ? 'Sin acento' : n}</button>`).join('')}
+            </div>
+          </div>
+
+          <div class="section-title">Volumen</div>
+          <div class="volume-row">
+            <div class="volume-block" id="metroVolBlock">
+              <div class="volume-block-label"><span>🔔 Metrónomo</span><span class="value" id="metroVolValue"></span></div>
+              <input type="range" id="metroVolSlider" min="0" max="100" step="1" aria-label="Volumen del metrónomo" />
+            </div>
+            <div class="volume-block">
+              <div class="volume-block-label"><span>🎧 Audio de demostración</span><span class="value" id="demoVolValue"></span></div>
+              <input type="range" id="demoVolSlider" min="0" max="100" step="1" aria-label="Volumen del audio de demostración" />
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title">Audio de demostración</div>
+        <div class="audio-row" id="audioRow"></div>
+
+        <div class="footer-row">
+          <label class="btn btn-outline btn-sm file-btn">
+            📷 Cargar foto de este paso
+            <input type="file" accept="image/*" id="imgInput" hidden />
+          </label>
+          <button class="btn btn-wine" id="finishBtn">Terminar y calificar</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const scoreFrameWrap = container.querySelector('#scoreFrameWrap');
+  const scoreFrame = container.querySelector('#scoreFrame');
+  const fullscreenBtn = container.querySelector('#fullscreenBtn');
+  const progressLabel = container.querySelector('#progressLabel');
+  const progressSegments = container.querySelector('#progressSegments');
+  const tonalidadNombre = container.querySelector('#tonalidadNombre');
+  const dots = container.querySelector('#dots');
+  const playBtn = container.querySelector('#playBtn');
+  const audioRow = container.querySelector('#audioRow');
+  const metroVolSlider = container.querySelector('#metroVolSlider');
+  const demoVolSlider = container.querySelector('#demoVolSlider');
+  const metroVolValue = container.querySelector('#metroVolValue');
+  const demoVolValue = container.querySelector('#demoVolValue');
+  const modePicker = container.querySelector('#modePicker');
+  const autoProgressBlock = container.querySelector('#autoProgressBlock');
+  const autoConfigBlock = container.querySelector('#autoConfigBlock');
+  const acentoBlock = container.querySelector('#acentoBlock');
+  const metroVolBlock = container.querySelector('#metroVolBlock');
+  const manualHint = container.querySelector('#manualHint');
+  const advancedToggle = container.querySelector('#advancedToggle');
+  const advancedPanel = container.querySelector('#advancedPanel');
+
+  metroVolSlider.value = Math.round(metronomeVolume * 100);
+  demoVolSlider.value = Math.round(demoVolume * 100);
+  metroVolValue.textContent = `${metroVolSlider.value}%`;
+  demoVolValue.textContent = `${demoVolSlider.value}%`;
+
+  /**
+   * Sección colapsable de "ajustes avanzados" (acento + volúmenes, ver
+   * DECISIONES.md ronda 6, punto 35): en horizontal (donde todo tiene que
+   * entrar sin scroll vertical) arranca colapsada para minimizar la altura
+   * usada por defecto; en vertical (donde esta pantalla igual permite
+   * scroll) arranca expandida, como se veía antes de este cambio.
+   */
+  function isLandscapeNow() {
+    return window.matchMedia && window.matchMedia('(orientation: landscape)').matches;
+  }
+  let advancedOpen = !isLandscapeNow();
+  function syncAdvancedVisibility() {
+    advancedPanel.hidden = !advancedOpen;
+    advancedToggle.setAttribute('aria-expanded', String(advancedOpen));
+    advancedToggle.textContent = advancedOpen ? '⚙ Ocultar acento y volumen' : '⚙ Acento y volumen';
+  }
+  advancedToggle.addEventListener('click', () => {
+    advancedOpen = !advancedOpen;
+    syncAdvancedVisibility();
+  });
+
+  // Modo manual (ver DECISIONES.md punto 32): tocar la partitura avanza o
+  // retrocede según la mitad tocada (ver DECISIONES.md ronda 6, punto 36) —
+  // mitad derecha avanza, mitad izquierda retrocede. El doble-tap para zoom
+  // sigue funcionando sin conflicto (ver zoom.js).
+  const zoomCtl = attachPinchZoom(scoreFrame, () => scoreFrame.querySelector('img, svg'), {
+    onSingleTap: ({ x } = {}) => {
+      if (mode !== 'manual') return;
+      const rect = scoreFrame.getBoundingClientRect();
+      const isRightHalf = typeof x === 'number' ? (x - rect.left) > rect.width / 2 : true;
+      goTo(isRightHalf ? index + 1 : index - 1);
+    },
+  });
+
+  /**
+   * Recalcula la maximización automática de tamaño (ver DECISIONES.md
+   * puntos 31 y 33) sobre la imagen actual, para el tamaño de marco que
+   * esté vigente en este momento. Hace falta volver a llamarla cada vez que
+   * el marco cambia de tamaño real después de haber pintado el paso —
+   * pantalla completa (que agranda el marco a toda la pantalla) y cambios
+   * de tamaño de ventana/orientación son los dos casos que lo disparan.
+   */
+  function applyAutoTransform() {
+    const imgEl = scoreFrame.querySelector('img');
+    if (!imgEl || !imgEl.complete || !imgEl.naturalWidth) return;
+    // Neutralizar ANTES de medir: si ya había una transformación aplicada
+    // (de un cálculo anterior), `getBoundingClientRect()` reflejaría la
+    // imagen ya escalada, no su tamaño real con `object-fit: contain`, y el
+    // cálculo se corrompería en cada recálculo sucesivo (ver DECISIONES.md
+    // punto 33).
+    zoomCtl.reset();
+    zoomCtl.reset(computeContentTransform(imgEl, scoreFrame));
+  }
+
+  function onFsChange() {
+    const isFs = document.fullscreenElement === scoreFrameWrap;
+    fullscreenBtn.textContent = isFs ? '✕' : '⛶';
+    fullscreenBtn.setAttribute('aria-label', isFs ? 'Salir de pantalla completa' : 'Pantalla completa');
+    // El marco cambia de tamaño real al entrar/salir de pantalla completa
+    // (ver reglas :fullscreen en styles.css): se espera un frame a que el
+    // navegador termine de aplicar el nuevo layout antes de remedirlo.
+    requestAnimationFrame(applyAutoTransform);
+  }
+  document.addEventListener('fullscreenchange', onFsChange);
+
+  // Cambios de tamaño de ventana/orientación (fuera de pantalla completa)
+  // también cambian el marco disponible — se recalcula con un debounce
+  // chico para no recalcular en cada píxel mientras se redimensiona.
+  let resizeTimer = null;
+  function onWindowResize() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(applyAutoTransform, 150);
+  }
+  window.addEventListener('resize', onWindowResize);
+
+  fullscreenBtn.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      const requestFs = scoreFrameWrap.requestFullscreen || scoreFrameWrap.webkitRequestFullscreen;
+      if (!requestFs) {
+        toast('Pantalla completa no está disponible en este navegador.');
+        return;
+      }
+      const result = requestFs.call(scoreFrameWrap);
+      if (result && typeof result.catch === 'function') {
+        result.catch(() => toast('No se pudo activar pantalla completa.'));
+      }
+    } else {
+      const exitFs = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exitFs) exitFs.call(document);
+    }
+  });
+
+  /**
+   * Los indicadores de paso son cuadraditos TOCABLES (ver DECISIONES.md
+   * ronda 6, punto 35): tocar uno salta directo a ese paso (`goTo(i)`, no
+   * hace falta ir de a uno con ⏮/⏭) y resincroniza el conteo de tiempos del
+   * paso — `goTo` ya reseteaba `beatsElapsedInPaso` a 0 en cada cambio de
+   * paso (ver `paintTonalidad`), así que reusar la misma función alcanza:
+   * es estructuralmente imposible que el conteo "seguido de largo" desde el
+   * paso viejo, el salto siempre arranca al tiempo 0 del paso destino.
+   */
+  function paintDots() {
+    dots.innerHTML = pasos
+      .map((p, i) => `<button type="button" class="step-square ${i < index ? 'past' : ''} ${i === index ? 'current' : ''}" data-step="${i}" aria-label="Ir al paso ${i + 1}: ${escapeHTML(p.etiqueta)}" title="${escapeHTML(p.etiqueta)}">${i + 1}</button>`)
+      .join('');
+  }
+
+  function paintAudioRow() {
+    const pasoId = pasos[index].id;
+    audioRow.innerHTML = BPM_OPTIONS.map((b) => {
+      const url = store.getAudioFor(pasoId, b);
+      if (url) {
+        return `
+          <div class="audio-chip has-audio">
+            <button class="audio-play" data-play="${b}" type="button">▶ ${b}</button>
+            <button class="audio-del icon-btn" data-del="${b}" type="button" aria-label="Quitar audio de ${b} BPM">🗑</button>
+          </div>`;
+      }
+      return `
+        <label class="audio-chip audio-upload">
+          + ${b}
+          <input type="file" accept="audio/*" data-upload="${b}" hidden />
+        </label>`;
+    }).join('');
+
+    audioRow.querySelectorAll('[data-play]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const url = store.getAudioFor(pasoId, Number(btn.dataset.play));
+        if (!url) return;
+        const audio = new Audio(url);
+        audio.volume = demoVolume;
+        audio.play().catch(() => toast('No se pudo reproducir el audio.'));
+      });
+    });
+    audioRow.querySelectorAll('[data-del]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        store.removeCustomAudio(pasoId, Number(btn.dataset.del));
+        paintAudioRow();
+      });
+    });
+    audioRow.querySelectorAll('[data-upload]').forEach((input) => {
+      input.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          store.setCustomAudio(pasoId, Number(input.dataset.upload), reader.result);
+          toast('Audio guardado para este paso.');
+          paintAudioRow();
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+  }
+
+  // Se incrementa en cada llamada a paintTonalidad(): permite descartar el
+  // resultado de la normalización de tamaño (ver más abajo) si para cuando
+  // termina de cargar la imagen el usuario ya cambió de paso otra vez.
+  let paintGeneration = 0;
+
+  function paintTonalidad() {
+    const p = pasos[index];
+    const myGeneration = ++paintGeneration;
+    tonalidadNombre.textContent = p.etiqueta;
+    const customImg = store.getImageFor(p.id) || p.imagenUrl;
+    if (customImg) {
+      scoreFrame.innerHTML = `<img src="${customImg}" alt="Partitura: ${p.etiqueta}" />`;
+      const imgEl = scoreFrame.querySelector('img');
+      zoomCtl.reset(); // valor neutro mientras se analiza esta imagen puntual
+      // Normalización + maximización automática de tamaño visual entre
+      // pasos (ver DECISIONES.md puntos 31 y 33): se calcula recién cuando
+      // la imagen terminó de cargar y de disponer su layout (hace falta su
+      // naturalWidth/naturalHeight y su caja ya renderizada).
+      const applyNormalization = () => {
+        if (myGeneration !== paintGeneration) return; // el usuario ya avanzó a otro paso: no pisarlo
+        applyAutoTransform();
+      };
+      if (imgEl.complete && imgEl.naturalWidth) applyNormalization();
+      else imgEl.addEventListener('load', applyNormalization, { once: true });
+    } else {
+      // Los placeholders SVG ya se generan con proporciones consistentes
+      // entre sí, así que no necesitan normalización (ver DECISIONES.md
+      // punto 31).
+      scoreFrame.innerHTML = scorePlaceholderSVG({
+        tonalidad: p.etiqueta,
+        articulacion: ARTICULACION_LABEL[exercise.articulacion] || exercise.articulacion,
+        tipo: exercise.tipo,
+        nivel: exercise.nivel,
+      });
+      zoomCtl.reset();
+    }
+    paintDots();
+    paintAudioRow();
+    beatsElapsedInPaso = 0;
+    renderSegments();
+  }
+
+  /**
+   * Dibuja la barra de progreso como segmentos discretos — uno por cada
+   * tiempo del paso actual (o de la cuenta de anticipación, mientras esa
+   * fase está activa) — y los va completando exactamente cuando el
+   * metrónomo dispara cada beat. Ver DECISIONES.md punto 24.
+   */
+  function renderSegments() {
+    const inCountIn = phase === 'countin';
+    const total = inCountIn ? countInBeatsTotal() : beatsPerPaso();
+    const filled = inCountIn ? countInElapsed : beatsElapsedInPaso;
+    progressLabel.textContent = inCountIn ? `Cuenta de entrada · ${countInElapsed}/${total}` : '';
+    progressLabel.classList.toggle('countin', inCountIn);
+    progressSegments.innerHTML = Array.from({ length: total }, (_, i) => (
+      `<span class="progress-segment ${i < filled ? 'filled' : ''}"></span>`
+    )).join('');
+  }
+
+  /** Único punto de avance de paso: llamado desde el callback de beat del
+   * metrónomo (ver handleBeat), nunca desde un timer aparte. */
+  function goTo(newIndex) {
+    if (newIndex >= pasos.length) {
+      stopAll();
+      showRatingOverlay(exercise, fromRoute, navigate);
+      return;
+    }
+    index = Math.max(0, newIndex);
+    paintTonalidad();
+  }
+
+  /**
+   * Único callback de tiempo real: lo dispara el metrónomo (lookahead
+   * scheduling) para cada tiempo que efectivamente suena. Durante la cuenta
+   * de anticipación solo cuenta tiempos sin tocar el paso/imagen; durante la
+   * reproducción, completa el segmento correspondiente y dispara el cambio
+   * de paso exactamente en el último tiempo del compás. Ver DECISIONES.md
+   * puntos 24 y 27.
+   */
+  function handleBeat() {
+    if (phase === 'countin') {
+      countInElapsed++;
+      renderSegments();
+      if (countInElapsed >= countInBeatsTotal()) {
+        phase = 'playing';
+        renderSegments();
+      }
+      return;
+    }
+    if (phase !== 'playing') return;
+    beatsElapsedInPaso++;
+    renderSegments();
+    if (beatsElapsedInPaso >= beatsPerPaso()) {
+      goTo(index + 1);
+    }
+  }
+
+  function stopAll() {
+    playing = false;
+    phase = 'stopped';
+    playBtn.textContent = '▶';
+    metronome.stop();
+    renderSegments();
+  }
+
+  function togglePlay() {
+    if (mode !== 'auto') return; // el botón de play queda oculto en modo manual; guarda defensiva
+    if (playing) {
+      stopAll();
+      return;
+    }
+    playing = true;
+    playBtn.textContent = '⏸';
+    // Cada vez que se arranca (incluso al reanudar de una pausa) hay cuenta
+    // de anticipación: ver DECISIONES.md punto 27.
+    phase = 'countin';
+    countInElapsed = 0;
+    renderSegments();
+    metronome.start({ bpm, accentEvery: acentoCada, volume: metronomeVolume, onBeat: handleBeat });
+  }
+
+  /**
+   * Modo automático (metrónomo/BPM) vs. manual (pedal/teclado/toque, ver
+   * DECISIONES.md punto 32): oculta/muestra de un saque todos los controles
+   * que solo tienen sentido en modo automático (barra de progreso por
+   * tiempo, BPM, acento, volumen del metrónomo, play/pausa) y muestra en su
+   * lugar el instructivo de modo manual. El acento y el volumen del
+   * metrónomo viven dentro del panel colapsable "ajustes avanzados" (ver
+   * DECISIONES.md ronda 6, punto 35), así que se ocultan/muestran dentro de
+   * ese panel independientemente de si está expandido o no.
+   */
+  function syncModeVisibility() {
+    const isManual = mode === 'manual';
+    modePicker.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c.dataset.mode === mode));
+    autoProgressBlock.hidden = isManual;
+    autoConfigBlock.hidden = isManual;
+    acentoBlock.hidden = isManual;
+    metroVolBlock.hidden = isManual;
+    manualHint.hidden = !isManual;
+    playBtn.hidden = isManual;
+  }
+
+  /**
+   * Teclas de avance/retroceso manual: son las mismas que emulan los pedales
+   * Bluetooth de "pasar página" para tablets/celulares que usan los músicos
+   * (no hace falta soporte de hardware especial, el pedal ya manda estas
+   * teclas). Solo activo en modo manual — ver DECISIONES.md punto 32.
+   */
+  function onKeyDown(e) {
+    if (mode !== 'manual') return;
+    if (['ArrowRight', 'ArrowDown', ' ', 'Spacebar', 'PageDown'].includes(e.key)) {
+      e.preventDefault();
+      goTo(index + 1);
+    } else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) {
+      e.preventDefault();
+      goTo(index - 1);
+    }
+  }
+  window.addEventListener('keydown', onKeyDown);
+
+  syncModeVisibility();
+  syncAdvancedVisibility();
+  paintTonalidad();
+  cleanupFn = () => {
+    document.removeEventListener('fullscreenchange', onFsChange);
+    window.removeEventListener('keydown', onKeyDown);
+    window.removeEventListener('resize', onWindowResize);
+    clearTimeout(resizeTimer);
+  };
+
+  modePicker.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-mode]');
+    if (!btn || btn.dataset.mode === mode) return;
+    stopAll(); // corta metrónomo/cuenta de anticipación si estaba sonando al cambiar de modo
+    mode = btn.dataset.mode;
+    syncModeVisibility();
+    saveSettings(exercise, { bpm, acentoCada, mode });
+  });
+
+  // Cuadraditos de paso (ver paintDots): saltan directo al paso tocado.
+  dots.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-step]');
+    if (!btn) return;
+    const target = Number(btn.dataset.step);
+    if (target === index) return;
+    goTo(target);
+  });
+
+  playBtn.addEventListener('click', togglePlay);
+  container.querySelector('#prevBtn').addEventListener('click', () => goTo(index - 1));
+  container.querySelector('#nextBtn').addEventListener('click', () => goTo(index + 1));
+
+  container.querySelector('#bpmPicker').addEventListener('click', (e) => {
+    const btn = e.target.closest('.bpm-chip');
+    if (!btn) return;
+    bpm = Number(btn.dataset.bpm);
+    container.querySelectorAll('.bpm-chip').forEach((c) => c.classList.toggle('active', Number(c.dataset.bpm) === bpm));
+    saveSettings(exercise, { bpm, acentoCada, mode });
+    metronome.setBpm(bpm);
+    paintAudioRow();
+  });
+
+  container.querySelector('#acentoPicker').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-acento]');
+    if (!btn) return;
+    acentoCada = Number(btn.dataset.acento);
+    container.querySelectorAll('#acentoPicker .chip').forEach((c) => c.classList.toggle('active', Number(c.dataset.acento) === acentoCada));
+    saveSettings(exercise, { bpm, acentoCada, mode });
+    metronome.setAccentEvery(acentoCada);
+  });
+
+  metroVolSlider.addEventListener('input', () => {
+    metronomeVolume = Number(metroVolSlider.value) / 100;
+    metroVolValue.textContent = `${metroVolSlider.value}%`;
+    metronome.setVolume(metronomeVolume);
+    store.setAudioSettings({ metronomeVolume });
+  });
+  demoVolSlider.addEventListener('input', () => {
+    demoVolume = Number(demoVolSlider.value) / 100;
+    demoVolValue.textContent = `${demoVolSlider.value}%`;
+    store.setAudioSettings({ demoVolume });
+  });
+
+  container.querySelector('#imgInput').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      store.setCustomImage(pasos[index].id, reader.result);
+      toast('Imagen guardada para este paso.');
+      paintTonalidad();
+    };
+    reader.readAsDataURL(file);
+  });
+
+  container.querySelector('#finishBtn').addEventListener('click', () => {
+    stopAll();
+    showRatingOverlay(exercise, fromRoute, navigate);
+  });
+}
+
+// ---------------------------------------------------------------------
+// Calificación al terminar
+// ---------------------------------------------------------------------
+
+function showRatingOverlay(exercise, fromRoute, navigate) {
+  const existing = document.getElementById('ratingOverlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'rating-overlay';
+  overlay.id = 'ratingOverlay';
+  overlay.innerHTML = `
+    <div class="rating-sheet">
+      <h2>¿Cómo te salió?</h2>
+      <div class="rating-buttons">
+        <button class="rating-btn costo" data-rating="costo">Me costó</button>
+        <button class="rating-btn normal" data-rating="normal">Normal</button>
+        <button class="rating-btn bien" data-rating="bien">Bien</button>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="cancelRating" style="margin-top:10px;">Seguir practicando</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.querySelectorAll('[data-rating]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      store.recordRating(exercise.id, btn.dataset.rating);
+      if (fromRoute === 'hoy') store.markStepDone(exercise.id);
+      overlay.remove();
+      toast('¡Registrado! Seguí así.');
+      navigate(fromRoute === 'hoy' ? '#/hoy' : '#/biblioteca');
+    });
+  });
+
+  overlay.querySelector('#cancelRating').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+}

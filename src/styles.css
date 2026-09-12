@@ -1,0 +1,1354 @@
+/* ============================================================
+   BandoGym — hoja de estilos
+   Estética: cuero, madera y latón de bandoneón. Tema oscuro fijo,
+   alto contraste, tipografía grande, objetivos táctiles amplios.
+   Ver DECISIONES.md → por qué tema oscuro fijo (no auto claro/oscuro).
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  /* Superficies */
+  --bg: #1a0d10;
+  --bg-elevated: #221216;
+  --bg-card: #2a161c;
+  --bg-card-hover: #331b22;
+  --border: #4a2b32;
+  --border-soft: #3a2126;
+
+  /* Texto */
+  --text: #f3ecdf;
+  --text-dim: #cdbcae;
+  --text-faint: #9a8a7e;
+
+  /* Acentos */
+  --gold: #c9a24b;
+  --gold-strong: #e2bc63;
+  --gold-ink: #241708;
+  --wine: #8c2f39;
+  --wine-strong: #a8394a;
+
+  /* Estados de calificación (paleta terrosa, no semáforo genérico) */
+  --rate-costo: #b5533c;
+  --rate-normal: #c9a24b;
+  --rate-bien: #5c8467;
+
+  /* Niveles */
+  --lvl-principiante: #6f8f9c;
+  --lvl-intermedio: #c9a24b;
+  --lvl-avanzado: #a8394a;
+
+  /* Tipografía */
+  --font-serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  --radius: 14px;
+  --radius-sm: 8px;
+  --tap-min: 56px;
+
+  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+* { box-sizing: border-box; }
+
+/* El atributo `hidden` se implementa vía `[hidden] { display: none }` en la
+   hoja de estilos del navegador — y cualquier regla de autor que fije
+   `display` en ese mismo elemento (ej. `.icon-btn { display: inline-flex }`)
+   la pisa, porque el origen de la regla (autor vs. navegador) pesa más que
+   la especificidad. Sin este `!important` el atributo `hidden` deja de
+   funcionar en cualquier elemento que también tenga una clase con `display`
+   propio — encontrado en un bug real: `#backBtn` (clase `.icon-btn`) quedaba
+   siempre visible pese a `hidden`. Ver DECISIONES.md punto 32. */
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 18px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  margin: 0 0 0.4em 0;
+  letter-spacing: 0.01em;
+}
+
+p { margin: 0 0 0.75em 0; }
+
+a { color: inherit; text-decoration: none; }
+
+button {
+  font-family: inherit;
+  font-size: 1rem;
+  color: inherit;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+::selection { background: var(--gold); color: var(--gold-ink); }
+
+/* ---------- App shell ---------- */
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-width: 640px;
+  margin: 0 auto;
+  background: var(--bg);
+  position: relative;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg) 100%);
+  border-bottom: 1px solid var(--border-soft);
+  padding-top: env(safe-area-inset-top);
+}
+
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  min-height: 52px;
+}
+
+.topbar-title {
+  font-size: 1.15rem;
+  margin: 0;
+  color: var(--gold-strong);
+  flex: 1;
+  text-align: center;
+}
+
+.topbar-spacer { width: 44px; display: inline-block; }
+
+.back-btn {
+  width: 44px;
+  height: 44px;
+}
+
+.screen {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+  outline: none;
+}
+
+.tabbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border-soft);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 10px 4px 8px;
+  min-height: var(--tap-min);
+  color: var(--text-faint);
+  border-top: 3px solid transparent;
+}
+
+.tab-btn.active {
+  color: var(--gold-strong);
+  border-top-color: var(--gold);
+}
+
+.tab-icon { font-size: 1.3rem; line-height: 1; }
+.tab-label { font-size: 0.72rem; letter-spacing: 0.02em; }
+
+/* ---------- Botones ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--tap-min);
+  padding: 12px 20px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 600;
+  width: 100%;
+  transition: background 0.15s ease, transform 0.05s ease;
+}
+
+.btn:active { transform: scale(0.98); }
+
+.btn-primary {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--gold-ink);
+}
+.btn-primary:active { background: var(--gold-strong); }
+
+.btn-outline {
+  background: transparent;
+  border-color: var(--gold);
+  color: var(--gold-strong);
+}
+
+.btn-wine {
+  background: var(--wine);
+  border-color: var(--wine);
+  color: #f9ece9;
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-dim);
+}
+
+.btn-sm {
+  min-height: 44px;
+  padding: 8px 14px;
+  width: auto;
+  font-size: 0.9rem;
+}
+
+.btn-row {
+  display: flex;
+  gap: 10px;
+}
+/* Los botones de `.btn-row` ya son `width: 100%` (regla de `.btn` de arriba)
+   pensados para ocupar todo el ancho estando solos; dentro de una fila hacen
+   falta como `flex: 1` en cambio, para repartirse el ancho parejo entre
+   varios sin que ninguno intente ocupar el 100% del contenedor. */
+.btn-row > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 1.3rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.icon-btn:active { background: var(--bg-card-hover); }
+
+.icon-btn-lg {
+  width: 72px;
+  height: 72px;
+  font-size: 1.8rem;
+  border-radius: 50%;
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--gold-ink);
+}
+
+/* ---------- Tarjetas ---------- */
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-card);
+}
+
+.card-tappable {
+  cursor: pointer;
+  display: block;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  background: var(--bg-card);
+}
+
+.card-tappable:active { background: var(--bg-card-hover); }
+
+/* ---------- Editar ejercicio desde la Biblioteca (ver DECISIONES.md punto 28) ---------- */
+/* La tarjeta de la biblioteca deja de ser un único <button> (no se puede
+   anidar un botón de editar adentro de otro botón): pasa a ser un
+   contenedor con dos zonas clicables independientes: el cuerpo (abre el
+   reproductor) y el botón de editar (abre el alta en modo edición). */
+
+.card-list-item { position: relative; }
+.card-open-area { cursor: pointer; padding-right: 42px; }
+.card-edit-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 40px;
+  height: 40px;
+  font-size: 1.05rem;
+}
+
+.card-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-title {
+  font-family: var(--font-serif);
+  font-size: 1.08rem;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: var(--text);
+}
+
+.card-meta {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+/* ---------- Insignias / chips ---------- */
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+}
+
+.badge-principiante { color: var(--lvl-principiante); }
+.badge-intermedio { color: var(--lvl-intermedio); }
+.badge-avanzado { color: var(--lvl-avanzado); }
+
+.badge-tipo {
+  color: var(--text-dim);
+  border-color: var(--border);
+  background: var(--bg-elevated);
+}
+
+.chip-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 14px;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.chip-row::-webkit-scrollbar { display: none; }
+
+.chip {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chip.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--gold-ink);
+}
+
+/* ---------- Encabezados de sección ---------- */
+
+.section-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  margin: 22px 0 10px;
+}
+.section-title:first-child { margin-top: 0; }
+
+.eyebrow {
+  font-size: 0.85rem;
+  color: var(--gold-strong);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: var(--text-dim);
+  margin-bottom: 18px;
+}
+
+/* ---------- Formularios ---------- */
+
+.field {
+  margin-bottom: 18px;
+}
+
+.field label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.field input[type="text"],
+.field input[type="number"],
+.field select,
+.field textarea {
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+
+.field textarea { min-height: 88px; resize: vertical; }
+
+.field-hint { font-size: 0.82rem; color: var(--text-faint); margin-top: 6px; }
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stepper-value {
+  min-width: 84px;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-family: var(--font-serif);
+}
+
+.stepper .icon-btn { width: 52px; height: 52px; font-size: 1.4rem; }
+
+.file-drop {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  text-align: center;
+  color: var(--text-dim);
+  cursor: pointer;
+  min-height: var(--tap-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-preview {
+  margin-top: 12px;
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* ---------- Pantalla Hoy ---------- */
+
+.time-picker {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.time-chip {
+  flex: 1;
+  min-height: var(--tap-min);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.time-chip.active {
+  background: var(--wine);
+  border-color: var(--wine);
+  color: #f9ece9;
+}
+
+.step-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+}
+
+.step-index {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  color: var(--gold-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-family: var(--font-serif);
+  flex-shrink: 0;
+}
+
+.step-card.done .step-index {
+  background: var(--gold);
+  color: var(--gold-ink);
+}
+
+.step-card.done .card-title {
+  color: var(--text-dim);
+  text-decoration: line-through;
+  text-decoration-color: var(--border);
+}
+
+.step-body { flex: 1; min-width: 0; }
+
+.step-swap {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  font-size: 1.1rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-dim);
+}
+
+.empty-state .big-icon {
+  font-size: 2.4rem;
+  color: var(--gold);
+  margin-bottom: 10px;
+}
+
+/* ---------- Reproductor ---------- */
+
+.player-wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+/* Decisión (ver DECISIONES.md punto 17): el marco ya no fuerza un
+   aspect-ratio fijo (4:3) — se ajusta al tamaño real de la imagen/SVG hasta
+   un tope de 60vh, en vez de dejar franjas en blanco cuando la proporción de
+   la imagen no coincide con la del marco. */
+.score-frame {
+  background: #f3ecdf;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  max-height: 60vh;
+}
+
+.score-frame img,
+.score-frame svg {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+  background: #f3ecdf;
+  touch-action: none; /* el pellizco/paneo lo maneja src/zoom.js */
+}
+
+.score-frame-wrap {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.score-fs-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  background: rgba(26, 13, 16, 0.72);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: var(--text);
+  width: 44px;
+  height: 44px;
+  font-size: 1.1rem;
+}
+
+/* Pantalla completa del marco de partitura: ocupa toda la pantalla del
+   dispositivo, con la imagen centrada y a su tamaño máximo posible. */
+.score-frame-wrap:fullscreen,
+.score-frame-wrap:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  background: #f3ecdf;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+
+.score-frame-wrap:fullscreen .score-frame,
+.score-frame-wrap:-webkit-full-screen .score-frame {
+  max-height: 100vh;
+  border: none;
+  border-radius: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.score-frame-wrap:fullscreen .score-frame img,
+.score-frame-wrap:fullscreen .score-frame svg,
+.score-frame-wrap:-webkit-full-screen .score-frame img,
+.score-frame-wrap:-webkit-full-screen .score-frame svg {
+  max-height: 100vh;
+}
+
+.tonalidad-label {
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.tonalidad-label .nombre {
+  font-family: var(--font-serif);
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--gold-strong);
+}
+
+.tonalidad-label .sub {
+  color: var(--text-dim);
+  font-size: 0.95rem;
+}
+
+.progress-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  justify-content: center;
+  margin: 12px 0 18px;
+}
+
+/* ---------- Cuadraditos de paso, tocables (ver DECISIONES.md ronda 6, punto 35) ----------
+   Reemplazan los puntitos decorativos anteriores: son <button>, tocar uno
+   salta directo a ese paso (goTo(i) en player.js) en vez de solo mostrar
+   posición. Se mantiene el mismo lenguaje visual (dorado = actual/pasado). */
+
+.step-square {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-faint);
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+}
+.step-square.past { background: var(--border-soft); color: var(--gold-strong); opacity: 0.75; }
+.step-square.current {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--gold-ink);
+  transform: scale(1.15);
+  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.25);
+}
+.step-square:active { transform: scale(0.92); }
+
+/* ---------- Barra de progreso segmentada (ver DECISIONES.md punto 24) ----------
+   Reemplaza la barra continua anterior: un segmento discreto por cada tiempo
+   del compás/paso actual, que se completa exactamente cuando suena cada
+   click del metrónomo (la única fuente de tiempo), en vez de deslizarse con
+   un timer en milisegundos aparte. */
+
+.progress-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+  min-height: 1.2em;
+  color: var(--text-faint);
+  margin-bottom: 4px;
+}
+.progress-label.countin { color: var(--gold-strong); }
+
+.progress-segments {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 18px;
+}
+.progress-segment {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+}
+.progress-segment.filled {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+
+.transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin: 6px 0 20px;
+}
+
+.player-config {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.config-block {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 12px;
+  text-align: center;
+}
+
+.config-block .config-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  margin-bottom: 6px;
+}
+
+.config-block .stepper { justify-content: center; }
+
+/* ---------- Selector de BPM fijo (40/60/80) ---------- */
+/* Decisión (ver DECISIONES.md punto 19): reemplaza el stepper de BPM libre,
+   tanto en el reproductor como en "Nuevo ejercicio". */
+
+.bpm-picker {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.bpm-chip {
+  flex: 1;
+  min-height: 48px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-dim);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.bpm-chip.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--gold-ink);
+}
+
+/* ---------- Bloque de configuración de una sola columna (acento) ---------- */
+/* Ver DECISIONES.md punto 26: la agrupación de acento es independiente del
+   compás real, con 10 opciones (0-9) que no entran cómodas en un flex de 2
+   columnas como .player-config, así que ocupa su propio bloque de ancho
+   completo con un chip-row desplazable. */
+
+.config-block-solo { margin-bottom: 18px; }
+.chip-row-center { margin-bottom: 0; justify-content: center; }
+
+/* ---------- Panel colapsable "ajustes avanzados" (ver DECISIONES.md ronda 6, punto 35) ----------
+   Agrupa acento + volúmenes (los controles "menos usados" según el pedido):
+   en horizontal arranca colapsado para que el resto entre sin scroll
+   vertical; en vertical arranca expandido (ver player.js, isLandscapeNow). */
+
+.advanced-toggle {
+  margin: 12px 0;
+}
+
+.advanced-panel {
+  margin-bottom: 4px;
+}
+
+/* ---------- Botones de pie de reproductor lado a lado (ver DECISIONES.md ronda 6, punto 35) ----------
+   "Cargar foto" y "Terminar y calificar" van apilados en vertical (igual que
+   antes) pero lado a lado en horizontal, para ahorrar una fila más. */
+
+.footer-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+.footer-row > * { width: 100%; margin: 0; }
+
+/* ---------- Volumen independiente de metrónomo y audio demo ---------- */
+/* Ver DECISIONES.md punto 25. */
+
+.volume-row {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.volume-block-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+.volume-block-label .value {
+  color: var(--gold-strong);
+  font-weight: 700;
+}
+
+input[type="range"] {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  outline: none;
+  border: 1px solid var(--border-soft);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 2px solid var(--gold-strong);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 2px solid var(--gold-strong);
+  cursor: pointer;
+}
+
+/* ---------- Audio de demostración por paso (ver DECISIONES.md punto 20) ---------- */
+
+.audio-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.audio-chip {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.audio-chip.has-audio {
+  background: var(--bg-card);
+  padding: 0 4px 0 10px;
+}
+
+.audio-chip.audio-upload {
+  background: transparent;
+  color: var(--text-faint);
+  border-style: dashed;
+}
+
+.audio-play {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--gold-strong);
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.audio-del {
+  width: 36px;
+  height: 36px;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+/* ---------- Pasos del formulario "Nuevo ejercicio" (ver DECISIONES.md punto 14) ---------- */
+
+.paso-row {
+  padding: 12px;
+}
+
+.paso-row-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.paso-index {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  color: var(--gold-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.paso-etiqueta {
+  flex: 1;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+
+.paso-row-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.file-drop-sm {
+  min-height: 44px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  flex: 0 0 auto;
+}
+
+.file-preview-sm {
+  max-width: 80px;
+  max-height: 80px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* Compases propios de cada paso (ver DECISIONES.md ronda 6, punto 34): mini
+   stepper por fila, más chico que el stepper grande del formulario. */
+.paso-row-compases {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-soft);
+}
+.paso-compases-label {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+.stepper-sm { gap: 8px; }
+.stepper-sm .icon-btn { width: 38px; height: 38px; font-size: 1.05rem; }
+.stepper-sm .stepper-value { min-width: 32px; font-size: 1rem; }
+
+.paso-row-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.paso-row-actions .icon-btn {
+  width: 40px;
+  height: 40px;
+  font-size: 1rem;
+}
+
+.rating-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 6, 8, 0.85);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 50;
+}
+
+.rating-sheet {
+  width: 100%;
+  max-width: 640px;
+  background: var(--bg-elevated);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+}
+
+.rating-sheet h2 {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.rating-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rating-btn {
+  min-height: 64px;
+  border-radius: var(--radius);
+  border: none;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #1c0e0e;
+}
+
+.rating-btn.costo { background: var(--rate-costo); color: #2a0f08; }
+.rating-btn.normal { background: var(--rate-normal); color: #241708; }
+.rating-btn.bien { background: var(--rate-bien); color: #0f2015; }
+
+/* ---------- Diálogo de confirmación genérico (ver DECISIONES.md ronda 7, punto 37) ---------- */
+/* Reusa `.rating-overlay`/`.rating-sheet` (mismo overlay + hoja inferior). */
+
+.confirm-sheet h2 { margin-bottom: 10px; }
+.confirm-message {
+  color: var(--text-dim);
+  margin-bottom: 18px;
+  text-align: center;
+}
+
+/* ---------- Respaldo / restauración en Perfil (ver DECISIONES.md ronda 7, punto 37) ---------- */
+
+.backup-banner {
+  background: var(--bg-card);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.backup-banner .banner-icon { font-size: 1.3rem; flex-shrink: 0; }
+.backup-banner p { margin: 0; font-size: 0.9rem; color: var(--text); }
+
+/* ---------- Fuelle (temporizador simple) ---------- */
+
+.timer-circle {
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  border: 6px solid var(--gold);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 20px auto;
+  background: radial-gradient(circle at 30% 20%, var(--bg-card), var(--bg));
+}
+
+.timer-circle .time {
+  font-family: var(--font-serif);
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: var(--gold-strong);
+}
+
+.timer-circle .target {
+  color: var(--text-faint);
+  font-size: 0.85rem;
+}
+
+/* ---------- Horizontal en la pantalla de Práctica (ver DECISIONES.md punto 17) ----------
+   Se activa con una clase en <body> puesta solo por src/screens/player.js, así el resto
+   de las pantallas (Hoy, Biblioteca, Nuevo, Perfil) nunca reciben estas reglas aunque el
+   dispositivo esté físicamente en horizontal. */
+
+body.is-player .app-shell {
+  max-width: none;
+}
+
+@media (orientation: landscape) {
+  /* Decisión (ver DECISIONES.md ronda 6, punto 35 — corrección de un bug
+     preexistente encontrado al verificar el punto 30 en el navegador real):
+     el alto disponible NO es `100vh - 20px`. Esa cuenta ignoraba el alto
+     real de `.topbar` y `.tabbar` (que sigue visible en Práctica: `app.js`
+     nunca la oculta, solo deja de marcar un tab como activo) — con esos
+     ~110-130px sin descontar, `.score-frame-wrap`/`.player-side` se forzaban
+     a una altura mayor que el espacio real de `.screen`, y el navegador
+     terminaba mostrando scroll vertical en TODA la pantalla (`.screen` ya
+     tiene `overflow-y:auto` de base) para poder llegar a ese exceso — exactamente
+     lo que este punto pide evitar. La corrección: en vez de un cálculo en
+     `vh` que no conoce el alto de topbar/tabbar, usar `height: 100%`
+     encadenado desde `.screen` (que sí tiene una altura real y definida:
+     ocupa el espacio que le queda a `flex: 1` dentro de `.app-shell` una vez
+     descontados topbar y tabbar) hasta `.player-wrap` → `.score-frame-wrap`/
+     `.player-side`. Y `.screen` pasa a `overflow: hidden` en esta pantalla
+     (en vez del `overflow-y: auto` general de las demás pantallas): así el
+     único scroll posible quedó contenido dentro de `.player-side` (su propio
+     `overflow-y: auto`, ver comentario más abajo), nunca en la página
+     entera. */
+  body.is-player .screen {
+    padding: 8px 14px calc(8px + env(safe-area-inset-bottom));
+    overflow: hidden;
+  }
+
+  body.is-player .player-wrap.escala-arpegio {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(240px, 0.8fr);
+    grid-template-rows: minmax(0, 1fr); /* una sola fila con altura definida (ver nota abajo) */
+    gap: 10px 18px;
+    align-items: stretch; /* antes "start" — ver nota abajo */
+    height: 100%;
+    min-height: 0;
+  }
+
+  /* Nota (ver DECISIONES.md ronda 6, punto 35): `align-items: start` (el
+     valor anterior) hace que cada celda del grid mida solo lo que su
+     contenido necesita, así que un `height: 100%` en los hijos no tenía
+     ninguna fila con tamaño definido contra la cual resolverse (el 100% se
+     terminaba resolviendo contra un ancestro distinto al esperado, dando
+     alturas mayores a las reales y desbordando `.screen`). `align-items:
+     stretch` + una fila `minmax(0, 1fr)` hacen que la fila SÍ tenga una
+     altura definida (la de `.player-wrap`, que a su vez es 100% de
+     `.screen`) y que las celdas la llenen solas — ya no hace falta poner
+     `height: 100%` en `.score-frame-wrap`/`.player-side`, alcanza con
+     `min-height: 0` (los ítems de grid tienen `min-height: auto` por
+     defecto, que impide encogerse por debajo del contenido — sin este reset
+     el estiramiento no alcanza a contener contenido más alto que la fila). */
+
+  /* Decisión (ver DECISIONES.md punto 30): el marco pasa a ocupar toda la
+     altura disponible de la columna (antes solo tomaba la altura de la
+     imagen, quedando pegado arriba con espacio vacío abajo cuando la imagen
+     no llenaba esa proporción). Como `.score-frame` ya centra su contenido
+     con flexbox (`align-items/justify-content: center`), al estirar el
+     marco la imagen queda centrada verticalmente dentro del espacio real
+     disponible, sea cual sea su proporción original. */
+  body.is-player .player-wrap.escala-arpegio .score-frame-wrap {
+    grid-column: 1;
+    margin-bottom: 0;
+    min-height: 0;
+  }
+
+  body.is-player .player-wrap.escala-arpegio .score-frame {
+    height: 100%;
+    width: 100%;
+    max-height: 100%;
+  }
+
+  body.is-player .player-wrap.escala-arpegio .score-frame img,
+  body.is-player .player-wrap.escala-arpegio .score-frame svg {
+    max-height: 100%;
+  }
+
+  /* `.player-side` conserva su propio `overflow-y: auto` (a diferencia de
+     `.screen`, que ahora es `overflow: hidden`): es la única red de
+     seguridad que queda ante una pantalla extremadamente baja o el panel de
+     "ajustes avanzados" expandido a mano sin espacio suficiente — ver el
+     comentario grande más abajo (ronda 6, punto 35). */
+  body.is-player .player-wrap.escala-arpegio .player-side {
+    grid-column: 2;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 2px;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* ---------- Sin scroll vertical en Práctica horizontal (ver DECISIONES.md ronda 6, punto 35) ----------
+   Todo el contenido de `.player-side` (modo de avance, barra de progreso,
+   nombre del paso, cuadraditos, play/pausa/anterior/siguiente, BPM, acento,
+   volúmenes, audio por velocidad, cargar foto, terminar) tiene que entrar en
+   la altura real del viewport sin necesitar scroll. Estrategia: 1) tamaños,
+   paddings y separaciones atados a `vh` con `clamp()` (así se achican solos
+   en pantallas bajas en vez de quedar fijos); 2) acento y volumen —los
+   controles menos usados— viven en un panel colapsable que arranca cerrado
+   en horizontal (ver player.js, `isLandscapeNow`/`advancedOpen`), liberando
+   la altura que antes ocupaban siempre. `.player-side` conserva
+   `overflow-y: auto` (regla de arriba) solo como red de seguridad ante
+   pantallas extremadamente bajas o el panel avanzado expandido a mano; en el
+   estado por defecto (panel cerrado) el contenido entra sin que ese scroll
+   llegue a activarse. Solo aplica en horizontal: en vertical esta pantalla
+   sigue permitiendo scroll normal, como el resto de la app. */
+@media (orientation: landscape) {
+  body.is-player .player-side { gap: clamp(3px, 1vh, 10px); }
+  body.is-player .player-side > * { margin: 0; }
+
+  body.is-player .config-block,
+  body.is-player .config-block-solo { padding: clamp(6px, 1.1vh, 12px); }
+  body.is-player .player-config { margin-bottom: 0; gap: clamp(8px, 1.6vh, 16px); }
+  body.is-player .config-block .config-label { font-size: clamp(0.62rem, 1.3vh, 0.8rem); margin: 0 0 clamp(2px, 0.5vh, 6px); }
+  /* `.section-title` no necesita margen propio en horizontal: ya sea como
+     hijo directo de `.player-side` o de `.advanced-panel`, el espaciado con
+     lo que viene antes/después ya lo da el `gap` del flex contenedor — un
+     margen extra acá lo duplicaría. */
+  body.is-player .section-title { font-size: clamp(0.62rem, 1.3vh, 0.8rem); margin: 0; }
+
+  body.is-player .manual-hint { font-size: clamp(0.66rem, 1.4vh, 0.82rem); line-height: 1.3; }
+  body.is-player .tonalidad-label { margin-bottom: 0; }
+  body.is-player .tonalidad-label .nombre { font-size: clamp(1.05rem, 3vh, 1.7rem); }
+  body.is-player .tonalidad-label .sub { font-size: clamp(0.7rem, 1.5vh, 0.95rem); }
+
+  body.is-player .progress-dots { gap: clamp(3px, 0.8vh, 7px); }
+  body.is-player .step-square { width: clamp(16px, 2.8vh, 22px); height: clamp(16px, 2.8vh, 22px); font-size: clamp(0.5rem, 1vh, 0.62rem); }
+
+  body.is-player .transport { gap: clamp(10px, 2.8vh, 20px); }
+  body.is-player .icon-btn { width: clamp(38px, 6.5vh, 56px); height: clamp(38px, 6.5vh, 56px); font-size: clamp(1rem, 2.2vh, 1.3rem); }
+  body.is-player .icon-btn-lg { width: clamp(46px, 8.5vh, 72px); height: clamp(46px, 8.5vh, 72px); font-size: clamp(1.2rem, 2.8vh, 1.8rem); }
+
+  body.is-player .chip,
+  body.is-player .bpm-chip { min-height: clamp(30px, 5vh, 44px); padding: clamp(4px, 0.9vh, 8px) clamp(8px, 1.6vw, 16px); font-size: clamp(0.74rem, 1.5vh, 0.88rem); }
+  body.is-player .chip-row { margin-bottom: 0; }
+
+  body.is-player .progress-label { font-size: clamp(0.68rem, 1.3vh, 0.78rem); margin-bottom: 2px; min-height: 0; }
+  body.is-player .progress-segments { margin-bottom: 0; }
+  body.is-player .progress-segment { height: clamp(5px, 0.9vh, 8px); }
+
+  body.is-player .advanced-toggle { min-height: clamp(30px, 5vh, 44px); padding: clamp(4px, 0.9vh, 8px) 14px; font-size: clamp(0.76rem, 1.5vh, 0.88rem); }
+  body.is-player .advanced-panel { display: flex; flex-direction: column; gap: clamp(4px, 1vh, 10px); }
+  body.is-player .advanced-panel > * { margin: 0; }
+
+  body.is-player .audio-row { gap: clamp(4px, 0.9vh, 8px); }
+  body.is-player .audio-chip { min-height: clamp(30px, 5vh, 44px); font-size: clamp(0.7rem, 1.4vh, 0.85rem); }
+
+  body.is-player .volume-row { gap: clamp(8px, 1.8vh, 16px); }
+  body.is-player .volume-block-label { font-size: clamp(0.68rem, 1.3vh, 0.8rem); margin-bottom: clamp(2px, 0.5vh, 8px); }
+  body.is-player input[type="range"] { height: clamp(4px, 0.7vh, 6px); }
+  body.is-player input[type="range"]::-webkit-slider-thumb { width: clamp(18px, 2.6vh, 26px); height: clamp(18px, 2.6vh, 26px); }
+  body.is-player input[type="range"]::-moz-range-thumb { width: clamp(18px, 2.6vh, 26px); height: clamp(18px, 2.6vh, 26px); }
+
+  body.is-player .footer-row { flex-direction: row; margin-top: clamp(4px, 1vh, 10px); }
+  body.is-player .footer-row > * { flex: 1 1 0; width: auto; }
+  body.is-player .btn { min-height: clamp(32px, 5.5vh, 56px); padding: clamp(6px, 1.1vh, 12px) 16px; }
+  body.is-player .btn-sm { min-height: clamp(30px, 5vh, 44px); }
+}
+
+/* ---------- Perfil ---------- */
+
+.level-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 18px;
+  margin-bottom: 14px;
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  background: var(--bg-card);
+  cursor: pointer;
+}
+
+.level-card.selected {
+  border-color: var(--gold);
+  background: var(--bg-card-hover);
+}
+
+.level-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.level-card p { color: var(--text-dim); margin: 0; font-size: 0.92rem; }
+
+.level-check {
+  margin-left: auto;
+  color: var(--gold-strong);
+  font-size: 1.3rem;
+  visibility: hidden;
+}
+.level-card.selected .level-check { visibility: visible; }
+
+/* ---------- Toast ---------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(90px + env(safe-area-inset-bottom));
+  transform: translateX(-50%) translateY(20px);
+  background: var(--gold);
+  color: var(--gold-ink);
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 60;
+  max-width: 90%;
+  text-align: center;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ---------- Utilidades ---------- */
+
+.text-center { text-align: center; }
+.mt-0 { margin-top: 0; }
+.mb-0 { margin-bottom: 0; }
+.flex-1 { flex: 1; }
+
+@media (min-width: 480px) {
+  body { font-size: 19px; }
+}
