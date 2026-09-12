@@ -1281,23 +1281,51 @@ body.is-player .app-shell {
   body.is-player .btn-sm { min-height: clamp(30px, 5vh, 44px); }
 }
 
-/* ---------- Topbar/tabbar más chicas en Práctica horizontal (ver DECISIONES.md punto 39) ----------
-   Siguen visibles (decisión previa, punto 35: `.tabbar` deja disponible
-   navegar a otra pantalla sin salir de Práctica, y `.topbar` conserva el
-   botón "Volver"), pero en horizontal le sacan al alto real de `.screen`
-   espacio que el reproductor necesita más — partitura + controles. El
-   título "Práctica" no cumple ninguna función ahí (la pantalla ya se
-   identifica por su contenido) así que se oculta entero en vez de solo
-   achicarse. */
+/* ---------- Tabbar más chica en Práctica horizontal (ver DECISIONES.md punto 39) ----------
+   Sigue visible (decisión previa, punto 35: deja disponible navegar a otra
+   pantalla sin salir de Práctica), pero en horizontal le saca al alto real
+   de `.screen` espacio que el reproductor necesita más — partitura +
+   controles. */
 @media (orientation: landscape) {
-  body.is-player .topbar-inner { min-height: 0; padding: clamp(2px, 0.8vh, 8px) 10px; }
-  body.is-player .topbar-title,
-  body.is-player .topbar-spacer { display: none; }
-  body.is-player .back-btn { width: clamp(30px, 5.5vh, 44px); height: clamp(30px, 5.5vh, 44px); }
-
   body.is-player .tab-btn { padding: clamp(2px, 0.6vh, 8px) 4px clamp(2px, 0.5vh, 6px); min-height: 0; gap: 1px; }
   body.is-player .tab-icon { font-size: clamp(0.85rem, 2vh, 1.3rem); }
   body.is-player .tab-label { font-size: clamp(0.55rem, 1vh, 0.72rem); }
+}
+
+/* ---------- Sin topbar en Práctica horizontal: botón "Volver" flotante (ver DECISIONES.md punto 41) ----------
+   El punto 39 había dejado `.topbar` visible pero achicada y sin título.
+   Acá se va un paso más allá y se saca la barra entera de la caja de flujo
+   (`position: absolute` en vez de la `sticky` de base, dentro de
+   `.app-shell` que ya es `position: relative`): así `.screen` (que sigue
+   siendo `flex: 1`, ver punto 35) pasa a ocupar también ese espacio, sin
+   necesidad de recalcular ningún alto a mano. Sobre la partitura queda
+   flotando solo el botón "Volver" — círculo bordó (`--wine`, el mismo tono
+   que ya usa `.btn-wine` en esta pantalla) con flecha blanca, en la esquina
+   superior izquierda. */
+@media (orientation: landscape) {
+  body.is-player .topbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: auto;
+    background: none;
+    border: none;
+    padding: 0;
+    z-index: 30;
+  }
+  body.is-player .topbar-inner { min-height: 0; padding: clamp(8px, 2vh, 14px); }
+  body.is-player .topbar-title,
+  body.is-player .topbar-spacer { display: none; }
+  body.is-player .back-btn {
+    width: clamp(34px, 6.5vh, 46px);
+    height: clamp(34px, 6.5vh, 46px);
+    border-radius: 50%;
+    background: var(--wine);
+    border: none;
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  }
+  body.is-player .back-btn:active { background: var(--wine-strong); }
 }
 
 /* ---------- Perfil ---------- */

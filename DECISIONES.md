@@ -1622,3 +1622,136 @@ CSS/JS, servidos por el service worker y actualizables in-place, ver punto
 "Bump CACHE_NAME"), iOS captura una instantánea del ícono en el momento de
 "Agregar a pantalla de inicio" y no la vuelve a consultar después, así que
 publicar un manifest nuevo no alcanza para actualizar un ícono ya instalado.
+
+## 41. Sin topbar en Práctica horizontal: botón "Volver" flotante sobre la partitura
+
+**Pedido (probado en iPhone real):** el punto 39 ya había achicado
+`.topbar`/`.tabbar` y sacado el título "Práctica" en horizontal, pero
+probado en el dispositivo real seguía quedando un margen superior
+desaprovechado (el alto de la barra, aunque chica, seguía restándole
+espacio a la partitura). El pedido puntual: que la barra superior
+desaparezca del todo en Práctica horizontal, y que el botón "Volver" que
+alojaba quede flotando sobre la partitura en la esquina superior izquierda,
+como un círculo de un color que se destaque (el bordó de la app) con una
+flecha blanca adentro.
+
+**Decisión:**
+- `body.is-player .topbar` pasa de `position: sticky` (la de base) a
+  `position: absolute` dentro de `.app-shell` (que ya es `position:
+  relative`), scopeado a horizontal + `body.is-player` como el resto de las
+  reglas de esta pantalla (punto 17). Sacarla de la caja de flujo así, en
+  vez de solo ponerle `display: none`, es lo que le devuelve ese espacio a
+  `.screen` sin tocar nada de JS ni de la fórmula de alturas: `.screen`
+  sigue siendo `flex: 1` dentro de `.app-shell` (punto 35), así que al
+  desaparecer `.topbar` del flujo automáticamente pasa a ocupar también esa
+  franja — el mismo razonamiento que ya había evitado recalcular nada a mano
+  en el punto 39.
+- `.topbar-title`/`.topbar-spacer` siguen ocultos (ya lo estaban desde el
+  punto 39) y `.topbar` pierde fondo/borde/padding propios — lo único que
+  quedó visible es `.back-btn`, ahora circular (`border-radius: 50%`) con
+  fondo `var(--wine)` (el mismo tono que ya usa `.btn-wine` en esta misma
+  pantalla, para "Terminar y calificar") y flecha blanca, con una sombra
+  sutil para que se distinga incluso sobre partituras con fondo claro.
+- No se tocó el DOM (`index.html`/`app.js`): sigue siendo el mismo
+  `#backBtn` de siempre, solo reposicionado y restyleado por CSS — mismo
+  patrón que el resto de los cambios de esta pantalla (evita duplicar el
+  elemento o su listener de click).
+
+**Por qué:** una vez que el punto 39 estableció que el título no cumplía
+ninguna función acá, el paso lógico siguiente (pedido explícitamente por el
+usuario tras probar en el dispositivo real) es cuestionar si la barra en sí
+necesitaba seguir ocupando su propia franja — la única función real que le
+quedaba (alojar "Volver") no requiere una barra entera, alcanza con el botón
+mismo flotando. `position: absolute` sobre un ancestro `relative` es la
+herramienta más simple para sacar un elemento del flujo sin tocar el resto
+del layout ya establecido (grid/flex de los puntos 30 y 35), y reusar
+`var(--wine)` en vez de inventar un color nuevo mantiene el botón coherente
+con el resto de la paleta de esta pantalla.
+
+**Verificado en el navegador:** con un ejercicio de prueba cargado y la
+ventana en horizontal, se confirmó que la partitura gana el espacio antes
+ocupado por la barra, que el botón circular flotante se ve por encima del
+marco de la partitura (sin quedar tapado), y que el click sigue navegando
+correctamente de vuelta a "Hoy"/Biblioteca (según de dónde se entró, ver
+punto 28) — no se tocó el handler, así que el comportamiento no podía haber
+cambiado, pero se verificó igual por tratarse de la única función que le
+queda al elemento.
+
+## 42. El acento del metrónomo deja de ser ajustable en Práctica: pasa a ser un dato fijo del ejercicio
+
+**Pedido:** el usuario decidió que, para cómo usa la app, el acento del
+metrónomo no necesita ser algo que se pueda tocar cada vez que abre un
+ejercicio a practicar — lo va a dejar configurado una vez y no lo va a
+volver a tocar desde ahí. Pidió sacar el selector "Acento cada" de la
+pantalla de Práctica (reduciendo lo que hay que scrollear en el panel
+lateral) y, si hace falta configurarlo, que se pueda hacer al cargar o
+editar el ejercicio en la Biblioteca.
+
+**Decisión — el acento pasa de "preferencia de sesión" a "dato del ejercicio":**
+- Antes vivía en `fuelle:playerSettings:v2:<id>` junto con BPM y modo
+  (auto/manual) — un valor que el usuario podía cambiar en cualquier
+  momento desde el chip-row `#acentoPicker` dentro del panel "Acento y
+  volumen" de `player.js`, y que quedaba persistido por ejercicio pero
+  seguía siendo, conceptualmente, una preferencia de *cómo practicás*, no
+  una propiedad del ejercicio en sí (al igual que BPM y modo, que siguen
+  siendo ajustables en Práctica sin problema).
+- Ahora es un campo más del ejercicio (`exercise.acentoDefault`), guardado
+  junto con `bpmDefault`/`compas` en `newExercise.js` (alta y edición) —
+  mismo patrón exacto que ya usaba "Velocidad de metrónomo sugerida" para
+  `bpmDefault`: un chip-row (`ACENTO_OPTIONS`, ya existía en `theory.js`)
+  ubicado justo debajo de "Compás" (de cuyo valor depende el default
+  sugerido, `tiemposPorCompas(compas)`), oculto para ejercicios de tipo
+  "Fuelle" igual que BPM/Compás (no usan metrónomo).
+- `player.js` ya no lee ni escribe `acentoCada` en `playerSettings`: lo
+  calcula una sola vez al montar la pantalla, directo de
+  `exercise.acentoDefault` (con fallback a `tiemposPorCompas(compas)` si el
+  ejercicio es de una carga vieja sin este campo), como una constante que no
+  cambia durante la sesión de práctica. Se sacó por completo el bloque
+  `#acentoBlock`/`#acentoPicker` del panel "ajustes avanzados", que pasa a
+  contener solo los volúmenes — el botón que lo despliega cambia de "⚙
+  Acento y volumen" a simplemente "⚙ Volumen" para reflejarlo.
+
+**Compatibilidad con ejercicios ya cargados:** los que no tengan
+`acentoDefault` (todos los cargados antes de este cambio) siguen
+funcionando exactos a como sonaban antes — el fallback a
+`tiemposPorCompas(compas)` es el mismo cálculo que usaba `defaultSettings()`
+como valor inicial previo a este cambio, así que el comportamiento por
+defecto no varió, solo dejó de poder tocarse desde Práctica. Si alguno tenía
+un valor distinto guardado a mano en `playerSettings` (vía el picker viejo),
+ese valor queda huérfano en `localStorage` (nunca más se lee) — no se agregó
+migración porque no hay forma de saber, sin abrir cada ejercicio, cuál
+valor "real" debería tener ahora en `acentoDefault`; el usuario puede
+resetearlo editando el ejercicio una vez.
+
+**Por qué:** mover el campo al mismo lugar y con el mismo patrón que
+`bpmDefault` (en vez de inventar un mecanismo nuevo) mantiene el formulario
+de alta/edición consistente consigo mismo, y evita que Práctica necesite
+seguir sabiendo nada de acento más allá de pasárselo tal cual al metrónomo
+al arrancar (`metronome.start({ accentEvery: acentoCada, ... })`, sin
+cambios). Calcularlo una sola vez como constante (en vez de dejarlo en una
+variable `let` reasignable, como quedó BPM) refleja directamente en el
+código que ya no es algo que la pantalla permita cambiar en vivo.
+
+## 43. Se saca "Cargar foto de este paso" de Práctica
+
+**Contexto:** el usuario preguntó para qué servía este botón, dado que él
+ya carga todas las imágenes de cada paso al crear el ejercicio en "Nuevo".
+La respuesta (server para agregar/reemplazar la imagen de un paso sin tener
+que ir a "Editar ejercicio" — útil si un paso quedó sin foto o salió mal
+encuadrada) no aplica a su flujo de trabajo real: él carga todo de entrada y
+no piensa reemplazar fotos desde Práctica.
+
+**Decisión:** se sacó el control (`<label class="file-btn">` + `#imgInput`)
+del `.footer-row`, que ahora solo tiene "Terminar y calificar", y su
+listener de `change` (`store.setCustomImage(pasos[index].id, ...)`) — la
+función de `store.js` que usaba (`setCustomImage`) no se tocó, porque
+`newExercise.js` la sigue usando para guardar la imagen de cada paso al
+cargar/editar un ejercicio; solo se quitó esta segunda vía de acceso a la
+misma función. El usuario aclaró que es una decisión "por ahora" — si más
+adelante hace falta reemplazar una foto sin pasar por "Editar ejercicio",
+se puede volver a agregar.
+
+**Por qué no tocar `store.setCustomImage`:** sigue siendo el mecanismo real
+que usa el formulario de alta/edición para guardar imágenes de pasos — sacar
+el botón de Práctica es remover un segundo *punto de entrada* a una función
+que sigue siendo necesaria, no la función en sí.

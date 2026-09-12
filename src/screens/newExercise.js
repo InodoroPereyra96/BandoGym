@@ -21,11 +21,11 @@
 // precarga con sus datos y el guardado actualiza en vez de crear uno nuevo.
 
 import * as store from '../store.js';
-import { newCustomExerciseSkeleton, makePasoEntry, generateArpegioMenorPasos, pasoCompases } from '../data.js';
+import { newCustomExerciseSkeleton, makePasoEntry, generateArpegioMenorPasos, pasoCompases, tiemposPorCompas } from '../data.js';
 import {
   NIVELES, NIVEL_LABEL, TIPOS, TIPO_LABEL,
   ARTICULACIONES, ARTICULACION_LABEL, ARTICULACIONES_ARPEGIO_MENOR, GRUPO_ARPEGIOS_MENORES,
-  NOMBRE_GRUPO_ARPEGIOS_MENORES, BPM_OPTIONS, COMPAS_OPTIONS,
+  NOMBRE_GRUPO_ARPEGIOS_MENORES, BPM_OPTIONS, COMPAS_OPTIONS, ACENTO_OPTIONS,
 } from '../theory.js';
 import { escapeHTML, normalizeNombre } from '../util.js';
 import { toast } from '../ui.js';
@@ -45,6 +45,9 @@ export function render(container, { param, navigate }) {
   let bpm = BPM_OPTIONS.includes(existing?.bpmDefault) ? existing.bpmDefault : 60;
   let compases = existing?.compasesPorPaso || 2;
   let compas = COMPAS_OPTIONS.includes(existing?.compas) ? existing.compas : '4/4';
+  let acentoCada = (Number.isFinite(existing?.acentoDefault) && existing.acentoDefault >= 0 && existing.acentoDefault <= 9)
+    ? existing.acentoDefault
+    : tiemposPorCompas(compas);
   let duracion = existing?.duracionEstimadaMin || 5;
   let fuelleImageDataUrl = existing && existing.tipo === 'fuelle' ? (store.getImageFor(existing.id) || null) : null;
 
@@ -104,6 +107,14 @@ export function render(container, { param, navigate }) {
         </div>
       </div>
 
+      <div class="field" id="acentoField">
+        <label>Acento del metrónomo</label>
+        <div class="field-hint">Cada cuántos tiempos suena el golpe acentuado durante la práctica (ver DECISIONES.md punto 42). Ya no se puede cambiar desde la pantalla de Práctica — se fija acá.</div>
+        <div class="chip-row chip-row-center" id="acentoPicker">
+          ${ACENTO_OPTIONS.map((n) => `<button type="button" class="chip ${n === acentoCada ? 'active' : ''}" data-acento="${n}">${n === 0 ? 'Sin acento' : n}</button>`).join('')}
+        </div>
+      </div>
+
       <div class="field" id="compasesField">
         <label for="f-compases">Compases por defecto para pasos nuevos</label>
         <div class="field-hint">Cada paso tiene su propio campo de compases (más abajo, en su fila) porque puede durar una cantidad distinta — este valor solo se usa como punto de partida al agregar un paso nuevo o generar los 24 de "Arpegios menores".</div>
@@ -155,6 +166,7 @@ export function render(container, { param, navigate }) {
   const compasesField = container.querySelector('#compasesField');
   const duracionField = container.querySelector('#duracionField');
   const compasField = container.querySelector('#compasField');
+  const acentoField = container.querySelector('#acentoField');
   const fuelleImgField = container.querySelector('#fuelleImgField');
   const pasosField = container.querySelector('#pasosField');
   const articulacionSel = container.querySelector('#f-articulacion');
@@ -193,6 +205,7 @@ export function render(container, { param, navigate }) {
     const esFuelle = tipoSel.value === 'fuelle';
     bpmField.hidden = esFuelle;
     compasField.hidden = esFuelle;
+    acentoField.hidden = esFuelle;
     compasesField.hidden = esFuelle;
     pasosField.hidden = esFuelle;
     duracionField.hidden = !esFuelle;
@@ -218,6 +231,13 @@ export function render(container, { param, navigate }) {
     if (!btn) return;
     compas = btn.dataset.compas;
     container.querySelectorAll('#compasPicker .chip').forEach((c) => c.classList.toggle('active', c.dataset.compas === compas));
+  });
+
+  container.querySelector('#acentoPicker').addEventListener('click', (e) => {
+    const btn = e.target.closest('.chip');
+    if (!btn) return;
+    acentoCada = Number(btn.dataset.acento);
+    container.querySelectorAll('#acentoPicker .chip').forEach((c) => c.classList.toggle('active', Number(c.dataset.acento) === acentoCada));
   });
 
   articulacionSel.addEventListener('change', () => {
@@ -416,6 +436,7 @@ export function render(container, { param, navigate }) {
       }
       exercise.bpmDefault = bpm;
       exercise.compas = compas;
+      exercise.acentoDefault = acentoCada;
       exercise.compasesPorPaso = compases;
       // Ver DECISIONES.md punto 38: el grupo se asigna por NOMBRE (+ tipo
       // arpegio), no por una lista fija de articulaciones — así cualquier

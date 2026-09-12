@@ -27,7 +27,7 @@
 import * as store from '../store.js';
 import { tiemposPorCompas, pasoCompases } from '../data.js';
 import { scorePlaceholderSVG, formatMMSS, computeContentTransform, escapeHTML } from '../util.js';
-import { NIVEL_LABEL, ARTICULACION_LABEL, BPM_OPTIONS, ACENTO_OPTIONS, GRUPO_ARPEGIOS_MENORES, NOMBRE_GRUPO_ARPEGIOS_MENORES } from '../theory.js';
+import { NIVEL_LABEL, ARTICULACION_LABEL, BPM_OPTIONS, GRUPO_ARPEGIOS_MENORES, NOMBRE_GRUPO_ARPEGIOS_MENORES } from '../theory.js';
 import { toast } from '../ui.js';
 import { createMetronome } from '../metronome.js';
 import { attachPinchZoom } from '../zoom.js';
@@ -39,17 +39,14 @@ function settingsKey(id) {
   return `fuelle:playerSettings:v2:${id}`;
 }
 
-/** Acento por defecto: el primer tiempo de cada compás real (ver DECISIONES.md
- * punto 26 — el usuario puede cambiarlo a cualquier valor 0-9 igual). */
 function defaultSettings(exercise) {
   const bpm = BPM_OPTIONS.includes(exercise.bpmDefault) ? exercise.bpmDefault : 60;
-  const compas = exercise.compas || '4/4';
   return {
     bpm,
     // Ya NO hay "compases" acá: cada paso trae el suyo propio (ver
     // DECISIONES.md ronda 6, punto 34) — el reproductor no persiste ningún
-    // valor global de compases.
-    acentoCada: tiemposPorCompas(compas),
+    // valor global de compases. Tampoco hay "acentoCada": desde el punto 42
+    // es un dato fijo del ejercicio, no una preferencia de sesión.
     mode: 'auto', // 'auto' (metrónomo/BPM) o 'manual' (pedal/teclado/toque) — ver DECISIONES.md punto 32
   };
 }
@@ -212,8 +209,14 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
 
   const settings = loadSettings(exercise);
   let bpm = BPM_OPTIONS.includes(settings.bpm) ? settings.bpm : 60;
-  let acentoCada = Math.min(9, Math.max(0, Math.round(Number(settings.acentoCada))));
-  if (!Number.isFinite(acentoCada)) acentoCada = tiempos;
+
+  // Acento: YA NO es ajustable en Práctica (ver DECISIONES.md punto 42) —
+  // es un dato fijo del ejercicio (`acentoDefault`, cargado en "Nuevo"/
+  // "Editar"), no una preferencia de sesión como bpm/modo.
+  const acentoDefault = Number(exercise.acentoDefault);
+  const acentoCada = (Number.isFinite(acentoDefault) && acentoDefault >= 0 && acentoDefault <= 9)
+    ? Math.round(acentoDefault)
+    : tiempos;
 
   let mode = settings.mode === 'manual' ? 'manual' : 'auto'; // ver DECISIONES.md punto 32
 
@@ -302,13 +305,6 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
 
         <button type="button" class="btn btn-outline btn-sm advanced-toggle" id="advancedToggle" aria-expanded="false"></button>
         <div class="advanced-panel" id="advancedPanel" hidden>
-          <div class="config-block config-block-solo" id="acentoBlock">
-            <div class="config-label">Acento cada (0 = sin acento)</div>
-            <div class="chip-row chip-row-center" id="acentoPicker">
-              ${ACENTO_OPTIONS.map((n) => `<button type="button" class="chip ${n === acentoCada ? 'active' : ''}" data-acento="${n}">${n === 0 ? 'Sin acento' : n}</button>`).join('')}
-            </div>
-          </div>
-
           <div class="section-title">Volumen</div>
           <div class="volume-row">
             <div class="volume-block" id="metroVolBlock">
@@ -326,10 +322,6 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
         <div class="audio-row" id="audioRow"></div>
 
         <div class="footer-row">
-          <label class="btn btn-outline btn-sm file-btn">
-            📷 Cargar foto de este paso
-            <input type="file" accept="image/*" id="imgInput" hidden />
-          </label>
           <button class="btn btn-wine" id="finishBtn">Terminar y calificar</button>
         </div>
       </div>
@@ -352,7 +344,6 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   const modePicker = container.querySelector('#modePicker');
   const autoProgressBlock = container.querySelector('#autoProgressBlock');
   const autoConfigBlock = container.querySelector('#autoConfigBlock');
-  const acentoBlock = container.querySelector('#acentoBlock');
   const metroVolBlock = container.querySelector('#metroVolBlock');
   const manualHint = container.querySelector('#manualHint');
   const advancedToggle = container.querySelector('#advancedToggle');
@@ -364,9 +355,10 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   demoVolValue.textContent = `${demoVolSlider.value}%`;
 
   /**
-   * Sección colapsable de "ajustes avanzados" (acento + volúmenes, ver
-   * DECISIONES.md ronda 6, punto 35): en horizontal (donde todo tiene que
-   * entrar sin scroll vertical) arranca colapsada para minimizar la altura
+   * Sección colapsable de "ajustes avanzados" (volúmenes — el acento se
+   * mudó a "Nuevo"/"Editar ejercicio", ver DECISIONES.md punto 42; en su
+   * momento también vivía acá, ver ronda 6, punto 35): en horizontal (donde
+   * todo tiene que entrar sin scroll vertical) arranca colapsada para minimizar la altura
    * usada por defecto; en vertical (donde esta pantalla igual permite
    * scroll) arranca expandida, como se veía antes de este cambio.
    */
@@ -377,7 +369,7 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   function syncAdvancedVisibility() {
     advancedPanel.hidden = !advancedOpen;
     advancedToggle.setAttribute('aria-expanded', String(advancedOpen));
-    advancedToggle.textContent = advancedOpen ? '⚙ Ocultar acento y volumen' : '⚙ Acento y volumen';
+    advancedToggle.textContent = advancedOpen ? '⚙ Ocultar volumen' : '⚙ Volumen';
   }
   advancedToggle.addEventListener('click', () => {
     advancedOpen = !advancedOpen;
@@ -643,18 +635,19 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
    * Modo automático (metrónomo/BPM) vs. manual (pedal/teclado/toque, ver
    * DECISIONES.md punto 32): oculta/muestra de un saque todos los controles
    * que solo tienen sentido en modo automático (barra de progreso por
-   * tiempo, BPM, acento, volumen del metrónomo, play/pausa) y muestra en su
-   * lugar el instructivo de modo manual. El acento y el volumen del
-   * metrónomo viven dentro del panel colapsable "ajustes avanzados" (ver
-   * DECISIONES.md ronda 6, punto 35), así que se ocultan/muestran dentro de
-   * ese panel independientemente de si está expandido o no.
+   * tiempo, BPM, volumen del metrónomo, play/pausa) y muestra en su lugar el
+   * instructivo de modo manual. El volumen del metrónomo vive dentro del
+   * panel colapsable "ajustes avanzados" (ver DECISIONES.md ronda 6, punto
+   * 35), así que se oculta/muestra dentro de ese panel independientemente de
+   * si está expandido o no. El acento ya no tiene control en esta pantalla
+   * (es fijo por ejercicio, ver punto 42), así que no hay nada que ocultar
+   * para él acá.
    */
   function syncModeVisibility() {
     const isManual = mode === 'manual';
     modePicker.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c.dataset.mode === mode));
     autoProgressBlock.hidden = isManual;
     autoConfigBlock.hidden = isManual;
-    acentoBlock.hidden = isManual;
     metroVolBlock.hidden = isManual;
     manualHint.hidden = !isManual;
     playBtn.hidden = isManual;
@@ -694,7 +687,7 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
     stopAll(); // corta metrónomo/cuenta de anticipación si estaba sonando al cambiar de modo
     mode = btn.dataset.mode;
     syncModeVisibility();
-    saveSettings(exercise, { bpm, acentoCada, mode });
+    saveSettings(exercise, { bpm, mode });
   });
 
   // Cuadraditos de paso (ver paintDots): saltan directo al paso tocado.
@@ -715,18 +708,9 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
     if (!btn) return;
     bpm = Number(btn.dataset.bpm);
     container.querySelectorAll('.bpm-chip').forEach((c) => c.classList.toggle('active', Number(c.dataset.bpm) === bpm));
-    saveSettings(exercise, { bpm, acentoCada, mode });
+    saveSettings(exercise, { bpm, mode });
     metronome.setBpm(bpm);
     paintAudioRow();
-  });
-
-  container.querySelector('#acentoPicker').addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-acento]');
-    if (!btn) return;
-    acentoCada = Number(btn.dataset.acento);
-    container.querySelectorAll('#acentoPicker .chip').forEach((c) => c.classList.toggle('active', Number(c.dataset.acento) === acentoCada));
-    saveSettings(exercise, { bpm, acentoCada, mode });
-    metronome.setAccentEvery(acentoCada);
   });
 
   metroVolSlider.addEventListener('input', () => {
@@ -739,18 +723,6 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
     demoVolume = Number(demoVolSlider.value) / 100;
     demoVolValue.textContent = `${demoVolSlider.value}%`;
     store.setAudioSettings({ demoVolume });
-  });
-
-  container.querySelector('#imgInput').addEventListener('change', (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      store.setCustomImage(pasos[index].id, reader.result);
-      toast('Imagen guardada para este paso.');
-      paintTonalidad();
-    };
-    reader.readAsDataURL(file);
   });
 
   container.querySelector('#finishBtn').addEventListener('click', () => {
