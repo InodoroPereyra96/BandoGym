@@ -18,12 +18,6 @@ export function toast(message) {
   toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
 }
 
-// Ícono de nivel: un disco de pesas (círculo + barra), guiño al concepto de
-// "gimnasio para bandoneonistas" (ver DECISIONES.md punto 45). Usa
-// stroke="currentColor" para heredar el color de `.badge-<nivel>` sin
-// necesitar una variante por nivel.
-const NIVEL_PLATE_ICON = '<svg class="badge-icon" viewBox="0 0 20 20" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><path d="M6 10h8"/></svg>';
-
 // Íconos de tipo de ejercicio (ver DECISIONES.md punto 45): una escalerita
 // para "Escala", los mismos escalones pero como puntos sueltos para
 // "Arpegio" (mismo origen visual, distinta idea: nota continua vs. notas
@@ -34,8 +28,11 @@ const TIPO_ICON = {
   fuelle: '<svg class="badge-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="5" height="16" rx="1"/><rect x="17" y="4" width="5" height="16" rx="1"/><path d="M7 7h10M7 11h10M7 15h10"/></svg>',
 };
 
+// Sin ícono a propósito (ver DECISIONES.md punto 48): el disco de pesas se
+// probó y se sacó a pedido del usuario — la insignia de nivel queda solo
+// con la palabra.
 export function nivelBadge(nivel) {
-  return `<span class="badge badge-${nivel}">${NIVEL_PLATE_ICON}${NIVEL_LABEL[nivel] || nivel}</span>`;
+  return `<span class="badge badge-${nivel}">${NIVEL_LABEL[nivel] || nivel}</span>`;
 }
 
 /** El ícono de tipo solo, sin envoltorio de badge — para meterlo en una

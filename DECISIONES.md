@@ -1990,3 +1990,144 @@ paso" tal como se pidió. En Práctica se confirmó que los 3 íconos de
 transporte nuevos se ven (no glyphs de texto) y que tocar play cambia
 correctamente al ícono de pausa y arranca la cuenta de entrada. El
 ejercicio de prueba se borró de `localStorage` al terminar.
+
+## 47. Separador "fuelle" más marcado, con puntitos tipo botones de bandoneón en los extremos
+
+**Pedido:** afinar el separador del punto 45 (probado ya en el dispositivo
+real, no solo en el navegador): que los pliegues se noten más pronunciados
+(antes el vaivén era muy sutil), y que en cada extremo aparezcan 3 puntitos
+verticales chicos — como los puntos del ícono de "Arpegio" del punto 45,
+pero más chicos y en vertical — simulando los botones del bandoneón a los
+costados del fuelle.
+
+**Decisión (`index.html` + `styles.css`):**
+- Las 4 polylines pasan de una amplitud de vaivén de ~1.2px (sobre un
+  `viewBox` de 12 de alto) a ~6px sobre un `viewBox` de 24 — el doble de
+  alto para que el pliegue más marcado tenga lugar sin verse recortado — más
+  `stroke-width` (1 → 1.3) y `stroke-linecap="round"` para que cada pliegue
+  se vea más "macizo". El contenedor (`.fuelle-divider`) pasa de 12px a 18px
+  de alto y de opacidad 0.6 a 0.7 para acompañar.
+- 6 círculos nuevos (`<circle>`, radio 1.7, relleno `var(--gold)`): 3
+  apilados en vertical en cada extremo del SVG (x≈7 y x≈393 sobre un ancho
+  de 400), a la misma altura que el fuelle — el dorado los hace leerse como
+  un detalle metálico (botonera) y no como parte del propio trazo del
+  fuelle, que sigue en `var(--text-faint)`.
+- No hizo falta tocar el CSS de `body.is-player .fuelle-divider { display:
+  none }` (punto 41): sigue ocultándose igual en Práctica horizontal, el
+  cambio es solo de contenido del SVG.
+
+**Por qué:** el pedido puntual pedía más contraste visual en dos ejes
+distintos (amplitud del pliegue, y un elemento nuevo en los extremos) — se
+resolvió cada uno con la herramienta más directa: subir la amplitud de las
+polylines existentes para lo primero, agregar elementos nuevos (círculos)
+para lo segundo, sin tocar la estructura general del separador (sigue
+siendo un único SVG insertado una vez en `index.html`, visible en todas las
+pantallas).
+
+**Verificado en el navegador:** en Hoy y Biblioteca se confirmó visualmente
+que el vaivén es notoriamente más marcado que antes y que los 6 puntitos
+dorados aparecen apilados en ambos extremos, a la misma altura que el
+fuelle.
+
+## 48. Bandoteca, botones del fuelle afuera de las ondas, título centrado de verdad, e insignia de nivel sin ícono
+
+**Pedido:** 4 ajustes puntuales, todos sobre cosas ya probadas en el
+dispositivo real. (1) Renombrar "Biblioteca" a "Bandoteca". (2) Que las
+líneas del fuelle (punto 47) no atraviesen los 3 puntitos de los extremos —
+tienen que leerse como los botones del instrumento, afuera del fuelle en
+sí, no una decoración más sobre la misma línea. (3) "Hoy"/"Bandoteca" en el
+topbar se ven corridos levemente a la izquierda del centro real. (4) En
+Biblioteca, sacar el ícono de disco de pesas de la insignia de nivel (punto
+45) y dejar solo la palabra ("Avanzado", etc.) — "así sacamos lo que vaya
+sobrando".
+
+**Decisión — "Bandoteca" (`app.js` + `index.html`):** cambia el texto
+visible nada más — `ROUTES.biblioteca.title` (usado por `topbarTitle`) y
+el `.tab-label` de la barra inferior. La ruta interna (`#/biblioteca`), el
+nombre del archivo (`library.js`) y las claves de `localStorage` no
+cambian — es un cambio de nombre visible, no del modelo de datos ni de las
+URLs.
+
+**Decisión — botones del fuelle afuera de las ondas (`index.html`):** las 4
+polylines pasaban de `x=0` a `x=400` (todo el ancho del SVG, cruzando por
+debajo de los puntitos en `x≈7`/`x≈393`); ahora van de `x=26` a `x=374`
+—dejan un margen limpio a cada lado— y los puntitos se corrieron un poco
+más afuera (`x=9`/`x=391`) para que quede un hueco visible entre el fuelle
+y la botonera, en vez de que se superpongan.
+
+**Decisión — título centrado (`app.js`):** la causa era que `.topbar-spacer`
+(un `<span>` de 44px que existe solo para balancear el ancho del botón
+"Volver" cuando se muestra) quedaba siempre visible, incluso en las
+pantallas donde `backBtn` está `hidden` — con `backBtn` fuera del flujo
+(`display:none`) pero el spacer de 44px todavía ocupando espacio a la
+derecha, el `<h1>` (que es `flex:1; text-align:center`) quedaba centrado
+respecto de una caja recortada 44px del lado derecho, no del ancho real del
+topbar — el texto terminaba corrido a la izquierda. Se agregó
+`topbarSpacer.hidden = backBtn.hidden` en `render()`, junto al lugar donde
+ya se decidía `backBtn.hidden` — así los dos aparecen o desaparecen juntos
+y el título queda centrado en el ancho completo cuando no hay botón
+"Volver" que balancear (Hoy, Bandoteca, Nuevo, Perfil), e igual que antes
+en las pantallas que sí lo tienen (Práctica, Editar).
+
+**Decisión — insignia de nivel sin ícono (`ui.js`):** se sacó
+`NIVEL_PLATE_ICON` (la constante del disco de pesas) y su uso en
+`nivelBadge()`, que vuelve a ser solo `<span class="badge
+badge-${nivel}">${NIVEL_LABEL[nivel]}</span>` — la constante en sí también
+se borró (no quedó código muerto). Los íconos de TIPO (`TIPO_ICON`,
+escalerita/puntos/fuelle) no se tocaron — el pedido fue puntual sobre el
+ícono de nivel.
+
+**Por qué (el centrado, en particular):** el bug era invisible leyendo el
+CSS solo (`.topbar-title { flex:1; text-align:center }` se ve correcto
+aislado) — apareció recién al ver `backBtn`/`topbar-spacer` como el PAR
+asimétrico que son: uno de los dos elementos que flanquean el título se
+sigue mostrando aun cuando el otro no. La solución más chica es tratarlos
+como el par que siempre debieron ser: se muestran juntos, se ocultan
+juntos.
+
+**Verificado en el navegador:** se confirmó visualmente en Hoy y Bandoteca
+que el título quedó centrado de verdad (antes corrido a la izquierda), que
+la pestaña inferior dice "Bandoteca", que los puntitos del fuelle ya no
+tienen ninguna línea pasando por encima, y que la insignia de nivel de un
+ejercicio de prueba ("Principiante") se ve sin el círculo, solo la
+palabra. El ejercicio de prueba se borró de `localStorage` al terminar.
+
+## 49. Motivo de fondo "fuelle" también en la tabbar inferior
+
+**Pedido:** que el zócalo inferior (la barra de "Hoy"/"Bandoteca"/"Nuevo"/
+"Perfil") tenga también un motivo ondulado de fondo, como el fuelle del
+separador del topbar (puntos 45/47/48) — sutil, con líneas oscuras, sin
+perder la distinción entre las 4 categorías.
+
+**Decisión (`styles.css`, `.tabbar`):** a diferencia del separador del
+topbar (un `<svg>` real insertado en `index.html`), acá el motivo va como
+`background-image` con un `data:image/svg+xml` — 3 polylines plegadas
+(mismo estilo zigzag que el resto de la familia "fuelle") en negro
+translúcido (`rgba(0,0,0,0.35)`, bien sutil) estirado con `background-size:
+100% 100%` para cubrir el alto real de la barra sea cual sea. Va como
+fondo del elemento (`background-image`, no un `<div>` posicionado encima)
+a propósito: un fondo SIEMPRE pinta detrás del contenido normal del
+elemento, así no hace falta pelear con z-index para que quede detrás de
+los 4 `.tab-btn` — la alternativa (un `<div>` con `position:absolute`
+suelto adentro de `.tabbar`) de hecho HABRÍA pintado por ENCIMA de los
+`.tab-btn` no posicionados, según el orden de pintado de CSS (los
+descendientes posicionados sin z-index pintan después que los
+no-posicionados) — un detalle no obvio que se dejó anotado en el propio
+comentario del CSS para no repetir el error a futuro.
+- No se usó ninguna variable de color (`var(--border)`, etc.): un `data:`
+  URI es una cadena de texto plana insertada en la hoja de estilos, no se
+  resuelve como CSS real — `var()` no funciona ahí. `rgba(0,0,0,0.35)` da
+  el mismo resultado ("línea oscura, sutil") sin depender de qué tono
+  exacto tenga `--border`/`--border-soft` en este momento, y sigue
+  funcionando igual si esos tokens cambiaran en el futuro.
+
+**Por qué no reusar el `<svg>` del punto 47 tal cual:** ese vive en
+`index.html`, una sola vez, DENTRO del `<header>` — insertarlo también en
+`.tabbar` hubiera significado duplicar el mismo bloque de marcado en dos
+lugares de `index.html` (topbar y tabbar) para un efecto puramente visual.
+Un `background-image` en CSS logra el mismo motivo con un solo cambio, en
+un solo archivo, sin tocar `index.html` de nuevo.
+
+**Verificado en el navegador:** se confirmó visualmente en Hoy que el
+motivo ondulado aparece de fondo en la tabbar, sutil (no compite con el
+texto), y que las 4 etiquetas siguen perfectamente legibles encima.

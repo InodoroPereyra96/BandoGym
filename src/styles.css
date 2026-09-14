@@ -147,15 +147,16 @@ input, select, textarea {
 
 .topbar-spacer { width: 44px; display: inline-block; }
 
-/* ---------- Separador "fuelle" (ver DECISIONES.md punto 45) ----------
+/* ---------- Separador "fuelle" (ver DECISIONES.md puntos 45 y 47) ----------
    Reemplaza el simple borde inferior del topbar: 4 líneas plegadas como los
-   pliegues de un fuelle de bandoneón, leyéndose de paso como un pentagrama.
-   Se oculta junto con el resto del topbar en Práctica horizontal (ver punto
-   41, `body.is-player .topbar`). */
+   pliegues de un fuelle de bandoneón, leyéndose de paso como un pentagrama,
+   con 3 puntitos dorados en cada extremo simulando los botones del
+   instrumento. Se oculta junto con el resto del topbar en Práctica
+   horizontal (ver punto 41, `body.is-player .topbar`). */
 .fuelle-divider {
-  height: 12px;
+  height: 18px;
   padding: 0 14px 6px;
-  opacity: 0.6;
+  opacity: 0.7;
 }
 .fuelle-divider svg { width: 100%; height: 100%; display: block; }
 
@@ -172,12 +173,22 @@ input, select, textarea {
   outline: none;
 }
 
+/* El motivo de fondo va como `background-image` (no un `<div>` absoluto):
+   así pinta siempre detrás del contenido de `.tabbar` sin depender de
+   z-index/orden de pintado — ver DECISIONES.md punto 49. Trazos en negro
+   translúcido (no una variable de color: un `data:` URI no puede leer
+   `var()`) bien sutiles, para no restarle legibilidad a "Hoy"/"Bandoteca"/
+   "Nuevo"/"Perfil" por encima. */
 .tabbar {
   position: sticky;
   bottom: 0;
   z-index: 20;
   display: flex;
-  background: var(--bg-elevated);
+  background-color: var(--bg-elevated);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 56' preserveAspectRatio='none'><polyline points='0,14 25,20 50,14 75,20 100,14 125,20 150,14 175,20 200,14 225,20 250,14 275,20 300,14 325,20 350,14 375,20 400,14' fill='none' stroke='rgba(0,0,0,0.35)' stroke-width='1.5' stroke-linecap='round'/><polyline points='0,28 25,34 50,28 75,34 100,28 125,34 150,28 175,34 200,28 225,34 250,28 275,34 300,28 325,34 350,28 375,34 400,28' fill='none' stroke='rgba(0,0,0,0.35)' stroke-width='1.5' stroke-linecap='round'/><polyline points='0,42 25,48 50,42 75,48 100,42 125,48 150,42 175,48 200,42 225,48 250,42 275,48 300,42 325,48 350,42 375,48 400,42' fill='none' stroke='rgba(0,0,0,0.35)' stroke-width='1.5' stroke-linecap='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
   border-top: 1px solid var(--border-soft);
   padding-bottom: env(safe-area-inset-bottom);
 }

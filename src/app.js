@@ -10,11 +10,12 @@ import * as profile from './screens/profile.js';
 const screenEl = document.getElementById('screen');
 const topbarTitle = document.getElementById('topbarTitle');
 const backBtn = document.getElementById('backBtn');
+const topbarSpacer = document.getElementById('topbarSpacer');
 const tabbar = document.getElementById('tabbar');
 
 const ROUTES = {
   hoy: { mod: today, title: 'Hoy', tab: 'hoy' },
-  biblioteca: { mod: library, title: 'Biblioteca', tab: 'biblioteca' },
+  biblioteca: { mod: library, title: 'Bandoteca', tab: 'biblioteca' },
   nuevo: { mod: newExercise, title: 'Nuevo ejercicio', tab: 'nuevo' },
   editar: { mod: newExercise, title: 'Editar ejercicio', tab: null },
   perfil: { mod: profile, title: 'Perfil', tab: 'perfil' },
@@ -61,7 +62,12 @@ function render() {
   currentModule = route.mod;
 
   topbarTitle.textContent = route.title;
+  // El spacer solo existe para balancear el ancho de `backBtn` y que el
+  // título quede centrado de verdad — si `backBtn` no se muestra, el
+  // spacer tampoco: dejarlo fijo desalineaba el título hacia la izquierda
+  // (ver DECISIONES.md punto 48).
   backBtn.hidden = route.tab !== null; // se muestra solo en pantallas sin tab (ej. reproductor)
+  topbarSpacer.hidden = backBtn.hidden;
   setActiveTab(route.tab);
 
   screenEl.innerHTML = '';
