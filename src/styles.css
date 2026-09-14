@@ -767,33 +767,8 @@ input, select, textarea {
 
 .config-block .stepper { justify-content: center; }
 
-/* ---------- Selector de BPM fijo (40/60/80) ---------- */
-/* Decisión (ver DECISIONES.md punto 19): reemplaza el stepper de BPM libre,
-   tanto en el reproductor como en "Nuevo ejercicio". */
-
-.bpm-picker {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-}
-
-.bpm-chip {
-  flex: 1;
-  min-height: 48px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--bg-elevated);
-  color: var(--text-dim);
-  font-weight: 700;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-.bpm-chip.active {
-  background: var(--gold);
-  border-color: var(--gold);
-  color: var(--gold-ink);
-}
+/* El selector fijo de BPM (40/60/80, `.bpm-picker`/`.bpm-chip`) del punto 19
+   se reemplazó por un slider de rango libre — ver DECISIONES.md punto 44. */
 
 /* ---------- Bloque de configuración de una sola columna (acento) ---------- */
 /* Ver DECISIONES.md punto 26: la agrupación de acento es independiente del
@@ -1255,7 +1230,6 @@ body.is-player .app-shell {
   body.is-player .icon-btn-lg { width: clamp(46px, 8.5vh, 72px); height: clamp(46px, 8.5vh, 72px); font-size: clamp(1.2rem, 2.8vh, 1.8rem); }
 
   body.is-player .chip,
-  body.is-player .bpm-chip { min-height: clamp(30px, 5vh, 44px); padding: clamp(4px, 0.9vh, 8px) clamp(8px, 1.6vw, 16px); font-size: clamp(0.74rem, 1.5vh, 0.88rem); }
   body.is-player .chip-row { margin-bottom: 0; }
 
   body.is-player .progress-label { font-size: clamp(0.68rem, 1.3vh, 0.78rem); margin-bottom: 2px; min-height: 0; }

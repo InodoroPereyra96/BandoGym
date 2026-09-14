@@ -25,9 +25,9 @@
 // bidireccional).
 
 import * as store from '../store.js';
-import { tiemposPorCompas, pasoCompases } from '../data.js';
+import { tiemposPorCompas, pasoCompases, isValidBpm } from '../data.js';
 import { scorePlaceholderSVG, formatMMSS, computeContentTransform, escapeHTML } from '../util.js';
-import { NIVEL_LABEL, ARTICULACION_LABEL, BPM_OPTIONS, GRUPO_ARPEGIOS_MENORES, NOMBRE_GRUPO_ARPEGIOS_MENORES } from '../theory.js';
+import { NIVEL_LABEL, ARTICULACION_LABEL, BPM_OPTIONS, BPM_MIN, BPM_MAX, GRUPO_ARPEGIOS_MENORES, NOMBRE_GRUPO_ARPEGIOS_MENORES } from '../theory.js';
 import { toast } from '../ui.js';
 import { createMetronome } from '../metronome.js';
 import { attachPinchZoom } from '../zoom.js';
@@ -40,7 +40,7 @@ function settingsKey(id) {
 }
 
 function defaultSettings(exercise) {
-  const bpm = BPM_OPTIONS.includes(exercise.bpmDefault) ? exercise.bpmDefault : 60;
+  const bpm = isValidBpm(Number(exercise.bpmDefault)) ? Number(exercise.bpmDefault) : 60;
   return {
     bpm,
     // Ya NO hay "compases" acá: cada paso trae el suyo propio (ver
@@ -208,7 +208,7 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   const tiempos = tiemposPorCompas(compas);
 
   const settings = loadSettings(exercise);
-  let bpm = BPM_OPTIONS.includes(settings.bpm) ? settings.bpm : 60;
+  let bpm = isValidBpm(Number(settings.bpm)) ? Number(settings.bpm) : 60;
 
   // Acento: YA NO es ajustable en Práctica (ver DECISIONES.md punto 42) —
   // es un dato fijo del ejercicio (`acentoDefault`, cargado en "Nuevo"/
@@ -294,11 +294,9 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
 
         <div id="autoConfigBlock">
           <div class="player-config">
-            <div class="config-block">
-              <div class="config-label">Metrónomo (BPM)</div>
-              <div class="bpm-picker" id="bpmPicker">
-                ${BPM_OPTIONS.map((b) => `<button class="bpm-chip ${b === bpm ? 'active' : ''}" data-bpm="${b}">${b}</button>`).join('')}
-              </div>
+            <div class="config-block config-block-solo volume-block" id="bpmBlock">
+              <div class="volume-block-label"><span>Metrónomo</span><span class="value" id="bpmValue">${bpm} BPM</span></div>
+              <input type="range" id="bpmSlider" min="${BPM_MIN}" max="${BPM_MAX}" step="1" value="${bpm}" aria-label="BPM del metrónomo" />
             </div>
           </div>
         </div>
@@ -337,6 +335,8 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   const dots = container.querySelector('#dots');
   const playBtn = container.querySelector('#playBtn');
   const audioRow = container.querySelector('#audioRow');
+  const bpmSlider = container.querySelector('#bpmSlider');
+  const bpmValue = container.querySelector('#bpmValue');
   const metroVolSlider = container.querySelector('#metroVolSlider');
   const demoVolSlider = container.querySelector('#demoVolSlider');
   const metroVolValue = container.querySelector('#metroVolValue');
@@ -482,8 +482,12 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
 
     audioRow.querySelectorAll('[data-play]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const url = store.getAudioFor(pasoId, Number(btn.dataset.play));
+        const refBpm = Number(btn.dataset.play);
+        const url = store.getAudioFor(pasoId, refBpm);
         if (!url) return;
+        // Sincronizar el metrónomo a la velocidad exacta de este audio de
+        // referencia (ver DECISIONES.md punto 44): así suenan a la par.
+        setBpm(refBpm);
         const audio = new Audio(url);
         audio.volume = demoVolume;
         audio.play().catch(() => toast('No se pudo reproducir el audio.'));
@@ -703,15 +707,21 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   container.querySelector('#prevBtn').addEventListener('click', () => goTo(index - 1));
   container.querySelector('#nextBtn').addEventListener('click', () => goTo(index + 1));
 
-  container.querySelector('#bpmPicker').addEventListener('click', (e) => {
-    const btn = e.target.closest('.bpm-chip');
-    if (!btn) return;
-    bpm = Number(btn.dataset.bpm);
-    container.querySelectorAll('.bpm-chip').forEach((c) => c.classList.toggle('active', Number(c.dataset.bpm) === bpm));
+  /**
+   * Cambia el BPM en vivo y lo propaga a todo lo que depende de él —
+   * metrónomo, UI del slider y persistencia — desde un único lugar (ver
+   * DECISIONES.md punto 44). Lo usan tanto el slider (arrastrado a mano)
+   * como la sincronización automática al tocar un audio de referencia.
+   */
+  function setBpm(newBpm) {
+    bpm = Math.min(BPM_MAX, Math.max(BPM_MIN, Math.round(newBpm)));
+    bpmSlider.value = bpm;
+    bpmValue.textContent = `${bpm} BPM`;
     saveSettings(exercise, { bpm, mode });
     metronome.setBpm(bpm);
-    paintAudioRow();
-  });
+  }
+
+  bpmSlider.addEventListener('input', () => setBpm(Number(bpmSlider.value)));
 
   metroVolSlider.addEventListener('input', () => {
     metronomeVolume = Number(metroVolSlider.value) / 100;

@@ -72,10 +72,20 @@ export const TIPO_LABEL = {
 
 export const TIPOS = ['fuelle', 'escala', 'arpegio'];
 
-// Las 3 únicas velocidades de metrónomo soportadas (ver DECISIONES.md punto 19):
-// reemplaza el control de BPM libre que existía antes, tanto en el alta de
-// ejercicio como en el reproductor.
+// Las 3 velocidades de audio de referencia por paso (ver DECISIONES.md
+// puntos 19-20 y 44): cada paso puede tener un audio de demostración grabado
+// a 40, 60 y/o 80 BPM. Sigue siendo un conjunto FIJO y chico a propósito —
+// grabar/subir un audio de referencia a cualquier BPM no es práctico — pero
+// desde el punto 44 ya NO es el único rango posible para el metrónomo en
+// vivo: ver BPM_MIN/BPM_MAX más abajo.
 export const BPM_OPTIONS = [40, 60, 80];
+
+// Rango libre del metrónomo en vivo (reproductor y "BPM sugerido" al cargar
+// un ejercicio) — ver DECISIONES.md punto 44. Tocar uno de los audios de
+// referencia (BPM_OPTIONS) sincroniza el metrónomo exactamente a esa
+// velocidad; fuera de eso, el usuario puede moverse libremente en este rango.
+export const BPM_MIN = 10;
+export const BPM_MAX = 300;
 
 // Compases soportados por ejercicio (ver DECISIONES.md ronda 3, punto 23):
 // antes la fórmula de duración por paso asumía siempre 4/4. Ahora el compás

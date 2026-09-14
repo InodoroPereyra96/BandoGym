@@ -16,9 +16,16 @@ import {
   TONALIDADES_MENORES_12,
   DIRECCIONES_FUELLE,
   BPM_OPTIONS,
+  BPM_MIN,
+  BPM_MAX,
   COMPAS_TIEMPOS,
 } from './theory.js';
 import { uid, slug } from './util.js';
+
+/** BPM válido dentro del rango libre del metrónomo (ver DECISIONES.md punto 44). */
+export function isValidBpm(v) {
+  return Number.isFinite(v) && v >= BPM_MIN && v <= BPM_MAX;
+}
 
 /**
  * Cantidad real de tiempos del compás dado (ej. '3/4' → 3). Si el ejercicio

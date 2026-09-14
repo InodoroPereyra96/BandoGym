@@ -1755,3 +1755,74 @@ se puede volver a agregar.
 que usa el formulario de alta/edición para guardar imágenes de pasos — sacar
 el botón de Práctica es remover un segundo *punto de entrada* a una función
 que sigue siendo necesaria, no la función en sí.
+
+## 44. BPM libre (10-300) en vez de 3 velocidades fijas, con sincronización automática al audio de referencia
+
+**Contexto:** el punto 19 había reemplazado un control de BPM libre por 3
+velocidades fijas (40/60/80) **en toda la app**, justamente para que el "BPM
+sugerido" y el metrónomo en vivo coincidieran siempre con alguna de las 3
+velocidades a las que se puede grabar un audio de referencia por paso (punto
+20). El pedido ahora es el inverso parcial: el usuario quiere mover el
+metrónomo libremente en un rango amplio (10 a 300 BPM) para practicar a la
+velocidad exacta que le sirva, pero sin perder la referencia sonora — al
+tocar uno de los audios grabados a 40/60/80, el metrónomo tiene que saltar
+exactamente a esa velocidad para sonar a la par; fuera de eso, el usuario
+puede alejarse libremente de esos 3 valores (perdiendo la sincronía con el
+audio, algo esperado — un audio grabado no puede cambiar de tempo solo).
+
+**Decisión:**
+- `BPM_OPTIONS` (`theory.js`) queda tal cual (`[40, 60, 80]`) pero pasa a
+  significar únicamente "a qué velocidades puede haber un audio de
+  referencia grabado por paso" — ya no es el único rango posible para el
+  metrónomo en vivo. Se agregan `BPM_MIN = 10` y `BPM_MAX = 300` para ese
+  rango libre.
+- El selector de 3 chips (`.bpm-picker`/`.bpm-chip`, tanto en `player.js`
+  como en "BPM sugerido" de `newExercise.js`) se reemplaza en los dos
+  lugares por un slider (`<input type="range">`, min/max `BPM_MIN`/`BPM_MAX`,
+  step 1) con el valor numérico como label — mismo componente visual que ya
+  usaban los sliders de volumen (`.volume-block`/`.volume-block-label`), así
+  que no hizo falta CSS nuevo, solo reusar esas clases. Se agregó
+  `isValidBpm()` en `data.js` (un solo lugar para el chequeo de rango
+  `BPM_MIN..BPM_MAX`, en vez de repetir la comparación en cada archivo) para
+  reemplazar los `BPM_OPTIONS.includes(...)` que validaban `bpmDefault`/
+  `settings.bpm` contra la lista fija de 3 valores.
+- **Sincronización al tocar un audio de referencia:** `player.js` centraliza
+  todo lo que depende del BPM (variable `bpm`, valor del slider, texto del
+  label, `metronome.setBpm()` y persistencia en `playerSettings`) en una
+  única función `setBpm(newBpm)`. El handler de "▶" en cada audio de
+  demostración (`paintAudioRow`, ver punto 20) ahora llama a `setBpm(refBpm)`
+  —con `refBpm` siendo 40, 60 u 80 según qué botón se tocó— **antes** de
+  reproducir el audio, así el metrónomo (suene o no en ese momento:
+  `metronome.setBpm()` no corta un click en curso, ver su propio comentario
+  en `metronome.js`) queda exactamente a esa velocidad. No hace falta ningún
+  chequeo especial para "cuando el usuario se aleja a mano": simplemente el
+  slider y el botón de audio escriben la misma variable `bpm` a través de la
+  misma función, así que el último que se tocó gana, sin ningún estado de
+  "sincronizado sí/no" que mantener aparte.
+- El audio-row en sí (`paintAudioRow`) no necesitó ningún cambio más allá de
+  la llamada a `setBpm`: sigue mostrando los 3 slots 40/60/80 igual que
+  antes (subir/reproducir/borrar), esos 3 valores siguen siendo fijos a
+  propósito (grabar/subir un audio de referencia a un BPM arbitrario no es
+  práctico).
+
+**Compatibilidad con datos viejos:** un `bpmDefault`/`playerSettings.bpm`
+guardado antes de este cambio siempre era 40, 60 u 80 — todos esos valores
+siguen siendo válidos dentro del rango `10..300`, así que ningún ejercicio ni
+ajuste guardado quedó fuera de rango; no hizo falta ninguna migración.
+
+**Por qué:** centralizar en `setBpm()` (en vez de que el slider y el handler
+de audio escriban `bpm`/`metronome.setBpm()`/`saveSettings()` cada uno por su
+lado) es lo que garantiza que "tocar un audio de referencia" y "mover el
+slider a mano" sean, para el resto del código, exactamente la misma
+operación — evita que un cambio futuro en uno de los dos caminos los
+desincronice por accidente. Reusar `.volume-block` en vez de crear un
+componente de slider nuevo mantiene consistencia visual (mismo look en
+Práctica: label + valor arriba, barra abajo) con cero CSS adicional.
+
+**Verificado en el navegador:** con un ejercicio de prueba (BPM sugerido
+150) y un audio de referencia sembrado a mano en `localStorage` para 60 BPM
+(ver `store.setCustomAudio`), se confirmó que Práctica arranca mostrando
+"150 BPM" en el slider (el sugerido), y que tocar "▶ 60" hace que el slider
+y el label salten a "60 BPM" al instante — tanto leyendo el DOM
+(`#bpmSlider.value`) como visualmente. Los datos de prueba (ejercicio y
+audio sembrado) se borraron de `localStorage` al terminar.

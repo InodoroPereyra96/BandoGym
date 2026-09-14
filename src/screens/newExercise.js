@@ -21,11 +21,11 @@
 // precarga con sus datos y el guardado actualiza en vez de crear uno nuevo.
 
 import * as store from '../store.js';
-import { newCustomExerciseSkeleton, makePasoEntry, generateArpegioMenorPasos, pasoCompases, tiemposPorCompas } from '../data.js';
+import { newCustomExerciseSkeleton, makePasoEntry, generateArpegioMenorPasos, pasoCompases, tiemposPorCompas, isValidBpm } from '../data.js';
 import {
   NIVELES, NIVEL_LABEL, TIPOS, TIPO_LABEL,
   ARTICULACIONES, ARTICULACION_LABEL, ARTICULACIONES_ARPEGIO_MENOR, GRUPO_ARPEGIOS_MENORES,
-  NOMBRE_GRUPO_ARPEGIOS_MENORES, BPM_OPTIONS, COMPAS_OPTIONS, ACENTO_OPTIONS,
+  NOMBRE_GRUPO_ARPEGIOS_MENORES, BPM_OPTIONS, COMPAS_OPTIONS, ACENTO_OPTIONS, BPM_MIN, BPM_MAX,
 } from '../theory.js';
 import { escapeHTML, normalizeNombre } from '../util.js';
 import { toast } from '../ui.js';
@@ -42,7 +42,7 @@ export function render(container, { param, navigate }) {
     ? existing.pasos.slice().sort((a, b) => a.orden - b.orden)
       .map((p) => ({ ...p, compases: pasoCompases(p, existing), _imgPreview: store.getImageFor(p.id) || p.imagenUrl || null }))
     : []; // { id, etiqueta, orden, compases, _imgPreview }
-  let bpm = BPM_OPTIONS.includes(existing?.bpmDefault) ? existing.bpmDefault : 60;
+  let bpm = isValidBpm(Number(existing?.bpmDefault)) ? Number(existing.bpmDefault) : 60;
   let compases = existing?.compasesPorPaso || 2;
   let compas = COMPAS_OPTIONS.includes(existing?.compas) ? existing.compas : '4/4';
   let acentoCada = (Number.isFinite(existing?.acentoDefault) && existing.acentoDefault >= 0 && existing.acentoDefault <= 9)
@@ -92,11 +92,10 @@ export function render(container, { param, navigate }) {
         <div class="field-hint" id="arpegioMenorHint" hidden>Este ejercicio va a formar parte del grupo "Arpegios menores": en la pantalla "Hoy" se agrupa con las demás variantes de ese mismo nombre y nivel en una sola fila.</div>
       </div>
 
-      <div class="field" id="bpmField">
-        <div class="config-label" style="margin-bottom:8px;font-weight:700;color:var(--text);">Velocidad de metrónomo sugerida</div>
-        <div class="bpm-picker" id="bpmPicker">
-          ${BPM_OPTIONS.map((b) => `<button type="button" class="bpm-chip ${b === bpm ? 'active' : ''}" data-bpm="${b}">${b}</button>`).join('')}
-        </div>
+      <div class="field volume-block" id="bpmField">
+        <div class="volume-block-label"><span>Velocidad de metrónomo sugerida</span><span class="value" id="bpmValue">${bpm} BPM</span></div>
+        <input type="range" id="bpmSlider" min="${BPM_MIN}" max="${BPM_MAX}" step="1" value="${bpm}" aria-label="Velocidad de metrónomo sugerida" />
+        <div class="field-hint">Punto de partida al abrir este ejercicio a practicar; se puede seguir ajustando libremente desde ahí (ver DECISIONES.md punto 44).</div>
       </div>
 
       <div class="field" id="compasField">
@@ -270,11 +269,11 @@ export function render(container, { param, navigate }) {
   stepper('#compDown', '#compUp', '#compValue', () => compases, (v) => (compases = v), 1, 8, 1);
   stepper('#durDown', '#durUp', '#durValue', () => duracion, (v) => (duracion = v), 1, 30, 1);
 
-  container.querySelector('#bpmPicker').addEventListener('click', (e) => {
-    const btn = e.target.closest('.bpm-chip');
-    if (!btn) return;
-    bpm = Number(btn.dataset.bpm);
-    container.querySelectorAll('#bpmPicker .bpm-chip').forEach((c) => c.classList.toggle('active', Number(c.dataset.bpm) === bpm));
+  const bpmSlider = container.querySelector('#bpmSlider');
+  const bpmValueLabel = container.querySelector('#bpmValue');
+  bpmSlider.addEventListener('input', () => {
+    bpm = Number(bpmSlider.value);
+    bpmValueLabel.textContent = `${bpm} BPM`;
   });
 
   // ---------- Imagen única (ejercicios de fuelle) ----------
