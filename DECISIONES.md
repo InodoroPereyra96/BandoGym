@@ -2357,3 +2357,36 @@ se confirmó que los 2 íconos se ven notoriamente más grandes junto a
 mini-bandoneón muestra el zigzag de 3 picos ascendentes con los 2 grupos de
 puntitos a los costados. El ejercicio de prueba se borró de `localStorage`
 al terminar.
+
+## 54. Los 3 audios de referencia (40/60/80) se mudan adentro del botón "Audio demo"
+
+**Pedido:** la sección "Audio de demostración" (los 3 slots 40/60/80 —
+subir/reproducir/borrar, ver punto 20) vivía siempre visible, aparte de los
+botones de volumen del punto 50. El pedido: que quede adentro del botón
+"Audio demo" — al desplegarlo, que se vean juntos el volumen Y los 3
+audios; al tenerlo cerrado, que no se vea nada de eso.
+
+**Decisión (`player.js`):** el bloque `<div class="section-title">Audio de
+demostración</div><div class="audio-row" id="audioRow"></div>` se movió de
+punta a punta del HTML (estaba después de `#demoVolBlock`, como su propia
+sección siempre visible) a DENTRO de `#demoVolBlock`, después del slider de
+volumen. No hizo falta tocar ni una línea de JS: `audioRow` se sigue
+consultando con el mismo `container.querySelector('#audioRow')` de
+siempre (el id no cambió, solo su posición en el árbol), `paintAudioRow()`
+sigue pintando ahí igual, y como `#demoVolBlock` ya se ocultaba/mostraba
+completo según `demoVolOpen` (punto 50), los audios ahora se ocultan/
+muestran gratis junto con el volumen, sin ningún flag ni lógica nueva.
+
+**Por qué fue un cambio de una sola línea de HTML:** el punto 50 ya había
+dejado `#demoVolBlock` como un contenedor independiente con su propio
+`hidden` controlado por un solo botón — mover contenido ADENTRO de un
+contenedor que ya se oculta/muestra como unidad es gratis; si el volumen y
+los audios todavía hubieran estado en la estructura vieja del panel único
+(punto 35, antes del punto 50), este pedido hubiera necesitado tocar la
+lógica de visibilidad también.
+
+**Verificado en el navegador:** con un ejercicio de prueba de tipo escala,
+se confirmó que con "Audio demo" cerrado no se ve ni el volumen ni los 3
+audios, y que al abrirlo aparecen los dos juntos ("Volumen del audio de
+demostración" + "AUDIO DE DEMOSTRACIÓN" con +40/+60/+80) debajo del botón.
+El ejercicio de prueba se borró de `localStorage` al terminar.

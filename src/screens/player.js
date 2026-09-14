@@ -342,10 +342,9 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
         <div class="volume-block" id="demoVolBlock" hidden>
           <div class="volume-block-label"><span>Volumen del audio de demostración</span><span class="value" id="demoVolValue"></span></div>
           <input type="range" id="demoVolSlider" min="0" max="100" step="1" aria-label="Volumen del audio de demostración" />
+          <div class="section-title">Audio de demostración</div>
+          <div class="audio-row" id="audioRow"></div>
         </div>
-
-        <div class="section-title">Audio de demostración</div>
-        <div class="audio-row" id="audioRow"></div>
 
         <div class="footer-row">
           <button class="btn btn-wine" id="finishBtn">Terminar y calificar</button>
