@@ -2705,3 +2705,84 @@ reprodujo en modo automático, inspeccionando el DOM en cada punto:
   que sin este cambio.
 - Sin errores de consola nuevos. Ejercicio e imágenes de prueba borrados de
   `localStorage` al terminar.
+
+## 59. La barra de práctica ahora cae exacta en cada compás real (detección de barras de compás, 2do intento — esta vez funcionó)
+
+**Reporte del usuario:** probó el punto 58 en su iPhone real y, aunque
+funcionaba (barra + atenuado visibles), la precisión no servía: "no es para
+nada precisa en cuanto a los tiempos de metrónomo... se debería posar
+exactamente sobre los tiempos fuertes del compás y va cayendo de manera
+azarosa en diferentes lugares" — exactamente el límite conocido y aceptado
+en el punto 58 (velocidad pareja, no por compás real). Cuando se le explicó
+que la detección automática de barras de compás ya se había intentado y
+descartado por poco confiable, el usuario insistió con una observación
+correcta: "la única línea que une pentagrama de sol y de fa es la línea de
+compás... ¿no es posible guiarse por esa línea?" — señalando específicamente
+el hueco ENTRE los dos pentagramas de un mismo sistema (no usado en los 2
+intentos fallidos del punto 58, que miraban la altura del sistema completo).
+
+**Debug real antes de tocar código:** en vez de seguir razonando en
+abstracto, se generó una visualización (línea roja dibujada en la posición
+detectada, sobre la imagen real agrandada) para cada hipótesis, algo que no
+se había hecho en los intentos del punto 58:
+1. Filtrar por el hueco entre pentagramas en vez de la altura completa del
+   sistema: dio los mismos números que antes (sin mejora) — pero la
+   visualización mostró que las líneas SÍ caían exactas en las barras
+   reales; el problema no era falsos positivos sino un umbral de agrupado
+   de columnas (3px) demasiado angosto para fundir la barra final doble
+   (fina+gruesa) en un solo evento, contándola como 2.
+2. Con el umbral de agrupado corregido (10px): quedó un desfase sistemático
+   de +2 por paso, +1 por sistema, en TODOS los casos — la visualización
+   mostró que era una barra "decorativa" pegada al inicio del sistema
+   (justo después de la clave/armadura), antes de que empiece el primer
+   compás real — no cierra ningún compás, hay que descartarla.
+3. Con las dos correcciones juntas, la detección coincidió exacta con las
+   barras reales en los casos probados (natural, sin alteraciones). En un
+   caso con muchas alteraciones (Lab menor, 7 bemoles) aparecieron menos
+   barras de las esperadas por comparación con otras tonalidades — se
+   verificó con un umbral mucho más laxo (bajado a la mitad) que NO hay
+   ninguna barra real perdida ahí (ninguna columna alcanza ni el 50% de
+   oscuridad en esos huecos), así que la conclusión es que esos compases
+   son genuinamente más anchos (las alteraciones ocupan más espacio
+   horizontal por nota), no una detección fallida.
+
+**Decisión:** se reemplaza `detectSystemSplit()` (punto 58, solo separaba
+2 sistemas por el hueco en blanco entre ellos) por `detectSystemLayout()`
+en `util.js` — hace lo mismo Y ADEMÁS detecta las barras de compás reales
+de cada sistema (mismas 2 correcciones de arriba: hueco entre pentagramas
++ umbral de agrupado 10px + margen que descarta la barra de apertura),
+devolviendo por sistema una lista de segmentos `[inicioFrac, finFrac]`, uno
+por compás real. En `player.js`, `updateCursorPosition()` ahora ubica la
+barra dentro del segmento real del compás actual (`Math.floor(beatsElapsedInSistema / tiempos)`),
+interpolando parejo solo DENTRO de ese compás puntual — no de todo el
+sistema. Si la imagen no tiene suficientes segmentos detectados para el
+compás actual (desajuste con los compases cargados a mano, o detección
+fallida), cae al modo parejo de todo el sistema del punto 58 como red de
+seguridad — nunca se rompe, en el peor caso queda como antes.
+
+De paso, la detección ahora se intenta para CUALQUIER paso con imagen (no
+solo los de 2 sistemas, ver `pasoTieneDosSistemas` en el punto 58) — un
+paso de 1 solo sistema también se beneficia de la barra cayendo exacta,
+aunque no haya nada para atenuar.
+
+**Por qué:** el usuario tenía razón en su intuición (guiarse por la unión
+entre pentagramas) — los 2 intentos fallidos del punto 58 no habían
+aislado esa franja específica, y encima tenían un bug de agrupado que
+inflaba el conteo independientemente del enfoque. La combinación de
+"mirar el debug visual en vez de solo los números" + "la pista concreta
+del usuario sobre qué línea mirar" fue lo que destrabó esto — otro caso
+del patrón ya documentado varias veces en este archivo de que las
+hipótesis abstractas sin evidencia visual llevan a conclusiones
+equivocadas (ver puntos 17, 33, 50, 51, 55).
+
+**Verificado en el navegador:** con un paso real (imagen del punto 56,
+"Am", 4+4 compases configurados) reproducido a 90 BPM en modo automático,
+se registraron 28 posiciones de la barra (`cursor.style.left`) en
+distintos tiempos del metrónomo y se compararon contra los segmentos
+calculados a mano a partir de las barras detectadas — **coincidencia
+exacta en todos los puntos verificados** (ej. al completar el 3er compás
+la barra salta a 85.79%, no al 75% que daría el reparto parejo — y 85.79%
+es justo donde está la barra de compás real detectada). `detectSystemSplit`
+quedó sin usos (reemplazada por `detectSystemLayout`) y se borró de
+`util.js`. Sin errores de consola nuevos. Ejercicio e imagen de prueba
+borrados de `localStorage` al terminar.

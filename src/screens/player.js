@@ -26,7 +26,7 @@
 
 import * as store from '../store.js';
 import { tiemposPorCompas, pasoTieneDosSistemas, pasoCompasesArriba, pasoCompasesAbajo, isValidBpm } from '../data.js';
-import { scorePlaceholderSVG, formatMMSS, computeContentTransform, detectSystemSplit, escapeHTML } from '../util.js';
+import { scorePlaceholderSVG, formatMMSS, computeContentTransform, detectSystemLayout, escapeHTML } from '../util.js';
 import { NIVEL_LABEL, ARTICULACION_LABEL, BPM_OPTIONS, BPM_MIN, BPM_MAX, GRUPO_ARPEGIOS_MENORES, NOMBRE_GRUPO_ARPEGIOS_MENORES } from '../theory.js';
 import { toast } from '../ui.js';
 import { createMetronome } from '../metronome.js';
@@ -273,10 +273,12 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   // `pasoTieneDosSistemas(pasos[index])` es true. Se resetea a 0 en cada
   // cambio de paso (ver paintTonalidad).
   let systemIndex = 0;
-  // Resultado de `detectSystemSplit()` sobre la imagen del paso actual (o
-  // `null` si es de 1 solo sistema, o no se pudo detectar) — se recalcula
-  // una vez por imagen cargada, no en cada beat.
-  let systemSplit = null;
+  // Resultado de `detectSystemLayout()` sobre la imagen del paso actual —
+  // rango vertical de cada sistema (1 o 2) MÁS los segmentos reales por
+  // compás (barras de compás detectadas, ver DECISIONES.md punto 59) — o
+  // `null` si no se pudo detectar. Se recalcula una sola vez por imagen
+  // cargada, no en cada beat.
+  let systemLayout = null;
 
   // Tiempos del SISTEMA activo dentro del paso actual (arriba o abajo, ver
   // DECISIONES.md punto 58) — es lo que gobierna cuándo salta la barra de
@@ -589,7 +591,7 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
     // (ver DECISIONES.md punto 58) — se recalcula sola más abajo si
     // corresponde.
     systemIndex = 0;
-    systemSplit = null;
+    systemLayout = null;
     const customImg = store.getImageFor(p.id) || p.imagenUrl;
     if (customImg) {
       scoreFrame.innerHTML = `
@@ -608,11 +610,12 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
       const applyNormalization = () => {
         if (myGeneration !== paintGeneration) return; // el usuario ya avanzó a otro paso: no pisarlo
         applyAutoTransform();
-        // Ver DECISIONES.md punto 58: se detecta el límite entre sistemas
-        // (si el paso tiene 2) una sola vez por imagen cargada, no en cada
-        // beat — reusa el mismo criterio (hueco horizontal en blanco) que
-        // el recorte automático hecho fuera de la app (puntos 56/57).
-        systemSplit = pasoTieneDosSistemas(p) ? detectSystemSplit(imgEl) : null;
+        // Ver DECISIONES.md punto 59: se detecta la estructura real de la
+        // imagen (sistemas + barras de compás) una sola vez por imagen
+        // cargada, no en cada beat. Se intenta siempre (no solo en pasos de
+        // 2 sistemas): un paso de 1 solo sistema también se beneficia de
+        // que la barra caiga exacta en cada compás real.
+        systemLayout = detectSystemLayout(imgEl);
         updateSystemVisuals();
       };
       if (imgEl.complete && imgEl.naturalWidth) applyNormalization();
@@ -723,48 +726,80 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   }
 
   /**
-   * Ver DECISIONES.md punto 58: posiciona el atenuado del sistema inactivo
-   * y la barra de práctica sobre el sistema activo, según lo que haya
-   * encontrado `detectSystemSplit()` para la imagen actual. Sin detección
-   * (paso de 1 solo sistema, o no se pudo analizar la imagen) u fuera de
-   * modo automático/reproduciendo, no se muestra nada — la función es
-   * segura de llamar en cualquier momento, no solo desde `handleBeat`.
+   * Ver DECISIONES.md punto 58/59: posiciona el atenuado del sistema
+   * inactivo (si hay 2) y la barra de práctica sobre el sistema activo,
+   * según lo que haya encontrado `detectSystemLayout()` para la imagen
+   * actual. Sin detección, o fuera de modo automático/reproduciendo, no se
+   * muestra nada — la función es segura de llamar en cualquier momento, no
+   * solo desde `handleBeat`.
    */
   function updateSystemVisuals() {
     const dimTop = scoreFrame.querySelector('.score-dim-top');
     const dimBottom = scoreFrame.querySelector('.score-dim-bottom');
     const cursor = scoreFrame.querySelector('.score-cursor');
     if (!dimTop || !dimBottom || !cursor) return;
-    const activo = phase === 'playing' && mode === 'auto' && systemSplit;
+    const systems = systemLayout && systemLayout.systems;
+    const activo = phase === 'playing' && mode === 'auto' && systems && systems.length > 0;
     if (!activo) {
       dimTop.classList.remove('active');
       dimBottom.classList.remove('active');
       cursor.classList.remove('active');
       return;
     }
-    const { system1, system2 } = systemSplit;
-    dimTop.style.top = `${system1.topFrac * 100}%`;
-    dimTop.style.height = `${(system1.bottomFrac - system1.topFrac) * 100}%`;
-    dimBottom.style.top = `${system2.topFrac * 100}%`;
-    dimBottom.style.height = `${(system2.bottomFrac - system2.topFrac) * 100}%`;
-    dimTop.classList.toggle('active', systemIndex === 1); // atenuado arriba mientras suena abajo
-    dimBottom.classList.toggle('active', systemIndex === 0); // atenuado abajo mientras suena arriba
-    const activeSystem = systemIndex === 0 ? system1 : system2;
+    // Defensivo: si el paso está marcado con 2 sistemas pero la detección
+    // solo encontró 1 (falló para el de abajo, por ejemplo), no se
+    // referencia un índice que no existe — se limita al de arriba.
+    const clampedIndex = Math.min(systemIndex, systems.length - 1);
+    const activeSystem = systems[clampedIndex];
+    if (systems.length > 1) {
+      const system1 = systems[0];
+      const system2 = systems[1];
+      dimTop.style.top = `${system1.topFrac * 100}%`;
+      dimTop.style.height = `${(system1.bottomFrac - system1.topFrac) * 100}%`;
+      dimBottom.style.top = `${system2.topFrac * 100}%`;
+      dimBottom.style.height = `${(system2.bottomFrac - system2.topFrac) * 100}%`;
+      dimTop.classList.toggle('active', clampedIndex === 1); // atenuado arriba mientras suena abajo
+      dimBottom.classList.toggle('active', clampedIndex === 0); // atenuado abajo mientras suena arriba
+    } else {
+      // Paso de 1 solo sistema: nada que atenuar, solo se muestra la barra.
+      dimTop.classList.remove('active');
+      dimBottom.classList.remove('active');
+    }
     cursor.style.top = `${activeSystem.topFrac * 100}%`;
     cursor.style.height = `${(activeSystem.bottomFrac - activeSystem.topFrac) * 100}%`;
     cursor.classList.add('active');
     updateCursorPosition();
   }
 
-  /** Mueve la barra de práctica a la posición horizontal correspondiente a
-   * `beatsElapsedInSistema` dentro del sistema activo — velocidad pareja
-   * (un salto igual por cada tiempo, ver charla con el usuario en
-   * DECISIONES.md punto 58, no detección de compás por compás). */
+  /**
+   * Mueve la barra de práctica a la posición horizontal correspondiente a
+   * `beatsElapsedInSistema` dentro del sistema activo. Ver DECISIONES.md
+   * punto 59: usa los segmentos REALES por compás detectados por
+   * `detectSystemLayout()` cuando hay suficientes (uno por cada compás
+   * configurado) — interpola dentro del compás actual asumiendo tiempos
+   * parejos dentro de ESE compás puntual (no de todo el sistema), mucho más
+   * preciso que repartir parejo todo el sistema. Si no hay suficientes
+   * segmentos detectados (desajuste con los compases cargados a mano, o
+   * detección fallida), cae a velocidad pareja en todo el sistema como
+   * antes (punto 58) — degradación segura, nunca se rompe.
+   */
   function updateCursorPosition() {
     const cursor = scoreFrame.querySelector('.score-cursor');
     if (!cursor || !cursor.classList.contains('active')) return;
     const total = beatsPerSistema();
-    const frac = total > 0 ? Math.min(1, beatsElapsedInSistema / total) : 0;
+    const fallbackFrac = total > 0 ? Math.min(1, beatsElapsedInSistema / total) : 0;
+
+    const systems = systemLayout && systemLayout.systems;
+    const clampedIndex = systems ? Math.min(systemIndex, systems.length - 1) : -1;
+    const segments = systems && systems[clampedIndex] ? systems[clampedIndex].segmentsFrac : null;
+    const compasIndex = Math.floor(beatsElapsedInSistema / tiempos);
+    const beatInCompas = beatsElapsedInSistema % tiempos;
+
+    let frac = fallbackFrac;
+    if (segments && segments.length > compasIndex) {
+      const [segStart, segEnd] = segments[compasIndex];
+      frac = segStart + (segEnd - segStart) * (beatInCompas / tiempos);
+    }
     cursor.style.left = `${frac * 100}%`;
   }
 

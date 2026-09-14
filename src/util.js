@@ -207,35 +207,44 @@ export function computeContentTransform(imgEl, frameEl) {
   }
 }
 
-// Ver DECISIONES.md punto 58: un paso de "Arpegios menores"/escalas puede
-// traer 2 sistemas apilados en la misma imagen (arriba=⊓/abriendo,
+// Ver DECISIONES.md puntos 58/59: un paso de "Arpegios menores"/escalas
+// puede traer 2 sistemas apilados en la misma imagen (arriba=⊓/abriendo,
 // abajo=V/cerrando, ver punto 56) — para que la barra de práctica sepa
-// dónde termina uno y empieza el otro, se detecta el hueco horizontal en
-// blanco entre ambos directamente en la imagen (misma idea que el recorte
-// automático hecho fuera de la app para el punto 56/57, pero del lado del
-// cliente y en base a franjas de fila, no líneas de pentagrama exactas —
-// alcanza con encontrar el hueco, no hace falta ubicar cada línea).
-const SYSTEM_SPLIT_SAMPLE_MAX = 500; // resolución del canvas de análisis (lado más largo)
-const SYSTEM_SPLIT_INK_LUMINANCE = 200; // mismo criterio de "tinta" que computeContentTransform
-const SYSTEM_SPLIT_MIN_GAP_FRACTION = 0.025; // hueco interno más angosto que esto no cuenta como separación real
-const SYSTEM_SPLIT_EDGE_MARGIN_FRACTION = 0.12; // ignora huecos pegados al borde (eso es margen, no separación entre sistemas)
+// dónde termina uno y empieza el otro, Y para que caiga exacta en cada
+// compás real (no a velocidad pareja por todo el sistema, ver punto 59),
+// se detectan las líneas de pentagrama de cada sistema y, dentro del hueco
+// entre el pentagrama de violín y el de bajo (ahí nunca hay notas, solo
+// puede haber una barra de compás real), las barras de compás reales.
+// Misma idea que el recorte automático hecho fuera de la app (puntos 56/57)
+// pero adaptada a canvas: se buscan las 2 líneas de pentagrama (violín y
+// bajo) de cada sistema, y dentro de la franja en blanco ENTRE esas dos
+// (donde nunca hay notas, solo puede haber una barra de compás real) se
+// buscan columnas oscuras de punta a punta.
+const LAYOUT_SAMPLE_MAX = 2000; // resolución de análisis: alcanza para las imágenes que genera el recorte automático (~1668px de ancho) sin reescalar
+const LAYOUT_INK_LUMINANCE = 200;
+const LAYOUT_STAFFLINE_MIN_WIDTH_FRAC = 0.5; // una línea de pentagrama cubre >=50% del ancho del sistema
+const LAYOUT_LINE_MERGE_GAP = 3; // px: filas contiguas -> misma línea de pentagrama
+const LAYOUT_INTRA_STAFF_MAX_GAP = 20; // px: separación típica entre las 5 líneas de UN pentagrama (a esta resolución)
+const LAYOUT_BARLINE_GAP_FRACTION = 0.9; // una barra real cruza ~toda la franja entre pentagramas
+const LAYOUT_BARLINE_MERGE_GAP = 10; // px: funde la barra final doble (fina+gruesa) en 1 solo evento
+const LAYOUT_OPENING_MARGIN = 0.025; // fracción del ancho del sistema: ignora una barra pegada al inicio (la de apertura, no cierra ningún compás)
 
 /**
- * Busca, dentro de `imgEl` (ya cargada), el hueco horizontal en blanco más
- * ancho que separe dos sistemas apilados verticalmente. Devuelve
- * `{ system1: {topFrac, bottomFrac}, system2: {topFrac, bottomFrac} }` (en
- * fracción 0..1 de la altura total de la imagen) si encuentra un hueco
- * interno suficientemente ancho, o `null` si la imagen parece ser de un
- * solo sistema (no se detectó separación clara) o no se pudo analizar.
+ * Detecta la estructura real de `imgEl` (ya cargada): para cada sistema
+ * (1 o 2, ver punto 56) encontrado, su rango vertical y la lista de
+ * segmentos [inicioFrac, finFrac] — uno por compás real, delimitados por
+ * las barras de compás detectadas — en fracción 0..1 del ancho de la
+ * imagen. Devuelve `null` si no se detectan al menos 2 líneas de
+ * pentagrama (imagen sin partitura reconocible, o análisis fallido).
  */
-export function detectSystemSplit(imgEl) {
+export function detectSystemLayout(imgEl) {
   try {
     const w = imgEl.naturalWidth;
     const h = imgEl.naturalHeight;
     if (!w || !h) return null;
 
     const longSide = Math.max(w, h);
-    const sampleScale = SYSTEM_SPLIT_SAMPLE_MAX / longSide;
+    const sampleScale = Math.min(1, LAYOUT_SAMPLE_MAX / longSide);
     const sampleW = Math.max(1, Math.round(w * sampleScale));
     const sampleH = Math.max(1, Math.round(h * sampleScale));
     const canvas = document.createElement('canvas');
@@ -245,49 +254,142 @@ export function detectSystemSplit(imgEl) {
     ctx.drawImage(imgEl, 0, 0, sampleW, sampleH);
     const { data } = ctx.getImageData(0, 0, sampleW, sampleH);
 
-    // Densidad de "tinta" por fila (fracción de píxeles no blancos).
-    const rowHasInk = new Array(sampleH).fill(false);
-    for (let y = 0; y < sampleH; y++) {
-      const rowStart = y * sampleW * 4;
-      for (let x = 0; x < sampleW; x++) {
-        const i = rowStart + x * 4;
-        if (data[i + 3] < 10) continue;
-        const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        if (lum < SYSTEM_SPLIT_INK_LUMINANCE) { rowHasInk[y] = true; break; }
-      }
-    }
-
-    // Franjas contiguas de filas totalmente en blanco.
-    const blankRuns = [];
-    let runStart = -1;
-    for (let y = 0; y < sampleH; y++) {
-      if (!rowHasInk[y]) {
-        if (runStart === -1) runStart = y;
-      } else if (runStart !== -1) {
-        blankRuns.push([runStart, y - 1]);
-        runStart = -1;
-      }
-    }
-    if (runStart !== -1) blankRuns.push([runStart, sampleH - 1]);
-
-    // Descartar huecos pegados al borde (margen superior/inferior de la
-    // imagen, no separación entre sistemas) y quedarse con el más ancho.
-    const edgeMargin = sampleH * SYSTEM_SPLIT_EDGE_MARGIN_FRACTION;
-    const internal = blankRuns.filter(([a, b]) => a > edgeMargin && b < sampleH - edgeMargin);
-    if (internal.length === 0) return null;
-
-    internal.sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]));
-    const [gapStart, gapEnd] = internal[0];
-    const gapFraction = (gapEnd - gapStart + 1) / sampleH;
-    if (gapFraction < SYSTEM_SPLIT_MIN_GAP_FRACTION) return null;
-
-    return {
-      system1: { topFrac: 0, bottomFrac: gapStart / sampleH },
-      system2: { topFrac: (gapEnd + 1) / sampleH, bottomFrac: 1 },
+    const isDark = (x, y) => {
+      const i = (y * sampleW + x) * 4;
+      if (data[i + 3] < 10) return false;
+      const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+      return lum < LAYOUT_INK_LUMINANCE;
     };
+
+    // 1. Líneas de pentagrama: filas con tinta en >=50% del ancho.
+    const rowThreshold = sampleW * LAYOUT_STAFFLINE_MIN_WIDTH_FRAC;
+    const lineRows = [];
+    for (let y = 0; y < sampleH; y++) {
+      let count = 0;
+      for (let x = 0; x < sampleW; x++) if (isDark(x, y)) count++;
+      if (count > rowThreshold) lineRows.push(y);
+    }
+    if (lineRows.length === 0) return null;
+    const lineBounds = mergeRuns(lineRows, LAYOUT_LINE_MERGE_GAP);
+
+    // 2. Agrupar de a 5 líneas -> un pentagrama (violín o bajo).
+    const staves = groupByGap(lineBounds, LAYOUT_INTRA_STAFF_MAX_GAP);
+    if (staves.length < 2) return null;
+
+    // 3. Agrupar pentagramas de a 2 (violín+bajo) -> un sistema, separando
+    // por el hueco más grande entre pentagramas consecutivos.
+    const systemsStaves = groupSystemsByBiggestGap(staves);
+
+    // 4. Por cada sistema: rango vertical, ancho de contenido, y barras de
+    // compás reales dentro del hueco violín->bajo.
+    const systems = systemsStaves.map((sysStaves) => {
+      const [treble, bass] = sysStaves; // cada uno [top, bottom]
+      const yTop = treble[0];
+      const yBottom = bass[1];
+      // ancho de contenido del sistema (para ubicar la barra de apertura)
+      let xLeft = -1;
+      let xRight = -1;
+      for (let x = 0; x < sampleW; x++) {
+        for (let y = yTop; y <= yBottom; y++) {
+          if (isDark(x, y)) { if (xLeft === -1) xLeft = x; xRight = x; break; }
+        }
+      }
+      if (xLeft === -1) return { topFrac: yTop / sampleH, bottomFrac: yBottom / sampleH, segmentsFrac: [[0, 1]] };
+
+      const gapTop = treble[1];
+      const gapBottom = bass[0];
+      const gapH = gapBottom - gapTop;
+      const barThreshold = gapH * LAYOUT_BARLINE_GAP_FRACTION;
+      const barCols = [];
+      for (let x = xLeft; x <= xRight; x++) {
+        let count = 0;
+        for (let y = gapTop; y < gapBottom; y++) if (isDark(x, y)) count++;
+        if (count > barThreshold) barCols.push(x);
+      }
+      const barGroups = mergeRuns(barCols, LAYOUT_BARLINE_MERGE_GAP).map(([a, b]) => Math.round((a + b) / 2));
+      const openingMargin = (xRight - xLeft) * LAYOUT_OPENING_MARGIN + LAYOUT_LINE_MERGE_GAP * 8; // margen absoluto chico + proporcional
+      const barlines = barGroups.filter((x) => (x - xLeft) > openingMargin);
+
+      // Segmentos = compases reales: [inicio,barra1], [barra1,barra2], ..., [ultimaBarra,fin]
+      const edges = [xLeft, ...barlines, xRight];
+      const segmentsFrac = [];
+      for (let i = 0; i < edges.length - 1; i++) {
+        segmentsFrac.push([edges[i] / sampleW, edges[i + 1] / sampleW]);
+      }
+      return { topFrac: yTop / sampleH, bottomFrac: yBottom / sampleH, segmentsFrac };
+    });
+
+    return { systems };
   } catch (e) {
-    return null; // cualquier falla de canvas: tratar como un solo sistema
+    return null; // cualquier falla de canvas: sin detección, el llamador cae al modo aproximado
   }
+}
+
+/** Agrupa números consecutivos (a lo sumo `maxGap` de separación) en runs `[inicio, fin]`. */
+function mergeRuns(nums, maxGap) {
+  if (nums.length === 0) return [];
+  const runs = [];
+  let start = nums[0];
+  let prev = nums[0];
+  for (let i = 1; i < nums.length; i++) {
+    if (nums[i] - prev <= maxGap) {
+      prev = nums[i];
+    } else {
+      runs.push([start, prev]);
+      start = nums[i];
+      prev = nums[i];
+    }
+  }
+  runs.push([start, prev]);
+  return runs;
+}
+
+/** Agrupa runs `[top,bottom]` consecutivos (separación <= maxGap) en grupos más grandes. */
+function groupByGap(runs, maxGap) {
+  if (runs.length === 0) return [];
+  const groups = [];
+  let cur = [runs[0]];
+  for (let i = 1; i < runs.length; i++) {
+    if (runs[i][0] - cur[cur.length - 1][1] <= maxGap) {
+      cur.push(runs[i]);
+    } else {
+      groups.push([cur[0][0], cur[cur.length - 1][1]]);
+      cur = [runs[i]];
+    }
+  }
+  groups.push([cur[0][0], cur[cur.length - 1][1]]);
+  return groups;
+}
+
+/** Agrupa pentagramas [top,bottom] de a 2 (sistema), separando por el mayor salto entre huecos consecutivos (ver auto_crop_partitura.py, misma idea). */
+function groupSystemsByBiggestGap(staves) {
+  if (staves.length < 2) return staves.length ? [staves] : [];
+  const gaps = [];
+  for (let i = 0; i < staves.length - 1; i++) gaps.push(staves[i + 1][0] - staves[i][1]);
+  const sorted = [...gaps].sort((a, b) => a - b);
+  let threshold;
+  if (new Set(sorted).size === 1) {
+    threshold = sorted[0] + 1;
+  } else {
+    let bestIdx = 0;
+    let bestJump = -1;
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const jump = sorted[i + 1] - sorted[i];
+      if (jump > bestJump) { bestJump = jump; bestIdx = i; }
+    }
+    threshold = (sorted[bestIdx] + sorted[bestIdx + 1]) / 2;
+  }
+  const systems = [];
+  let cur = [staves[0]];
+  for (let i = 1; i < staves.length; i++) {
+    const gap = staves[i][0] - staves[i - 1][1];
+    if (gap > threshold) { systems.push(cur); cur = [staves[i]]; } else { cur.push(staves[i]); }
+  }
+  systems.push(cur);
+  // Cada sistema debe tener exactamente 2 pentagramas (violín+bajo); si algo
+  // salió raro (ej. una sola línea suelta detectada de más), se descarta ese
+  // grupo en vez de romper todo el análisis.
+  return systems.filter((s) => s.length === 2);
 }
 
 /** Escapa texto para insertarlo de forma segura en HTML (contenido o atributos). */
