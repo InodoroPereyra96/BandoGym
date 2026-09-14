@@ -2390,3 +2390,64 @@ se confirmó que con "Audio demo" cerrado no se ve ni el volumen ni los 3
 audios, y que al abrirlo aparecen los dos juntos ("Volumen del audio de
 demostración" + "AUDIO DE DEMOSTRACIÓN" con +40/+60/+80) debajo del botón.
 El ejercicio de prueba se borró de `localStorage` al terminar.
+
+## 55. Bug real: el marco de la partitura cambiaba de tamaño entre pasos en vertical
+
+**Reporte del usuario:** mandó 2 capturas de su iPhone en vertical (pasos
+distintos de un mismo ejercicio de "Arpegios menores") mostrando que el
+recuadro blanco de la partitura tenía una altura visiblemente distinta
+entre una y otra. Preguntó si tenía que cortar/preparar sus imágenes a un
+tamaño exacto para poder implementar el deslizamiento entre pasos que
+había pedido antes (ver el intercambio previo sobre esa idea).
+
+**Corrección a lo que se había contestado antes:** la respuesta anterior
+("el marco ya es un tamaño fijo, no hace falta preparar las imágenes") era
+CORRECTA para Práctica horizontal, pero INCOMPLETA — no se había revisado
+la regla base (fuera de la media query de horizontal). El usuario detectó
+el problema real con evidencia (capturas del dispositivo), no solo
+describiéndolo — otro caso más de "hace falta el dispositivo real" (puntos
+17, 33, 50, 51).
+
+**Causa raíz:** `.score-frame` (la caja blanca) tenía `max-height: 60vh`
+pero ninguna altura mínima ni fija — sin una, la caja se ajusta al tamaño
+YA renderizado de la imagen (`display:flex` + `object-fit:contain` en el
+`<img>`), así que cada imagen, según su proporción original, terminaba
+dejando la caja más alta o más baja. En horizontal esto no se nota porque
+`body.is-player .player-wrap.escala-arpegio .score-frame` fuerza `height:
+100%` dentro de una celda de grid con alto ya fijo (puntos 30 y 35) — pero
+esa regla vive DENTRO de `@media (orientation: landscape)`, nunca se aplicó
+en vertical.
+
+**Por qué `max-height` y no una altura fija desde el principio:** un
+comentario viejo en el propio CSS explica que el marco tenía antes un
+aspect-ratio fijo (4:3) y se sacó porque dejaba franjas en blanco feas
+cuando la proporción de la imagen no coincidía con esa proporción fija —
+ese cambio resolvió el problema de las franjas, pero a costa de introducir
+este otro (tamaño inconsistente entre pasos), sin que nadie lo notara hasta
+ahora.
+
+**Decisión:** `.score-frame` pasa de `max-height: 60vh` a `height: 60vh` —
+una altura fija de verdad, no un tope. Esto por sí solo NO reintroduce el
+problema de las franjas en blanco que motivó el cambio original, porque
+para cuando se tomó esa decisión (mucho antes del punto 31) todavía no
+existía el sistema de normalización/maximización automática
+(`computeContentTransform` en `util.js`, puntos 31 y 33) que agranda cada
+imagen para llenar el marco lo más posible sea cual sea su proporción — ese
+sistema ya estaba resolviendo el problema de las franjas por otro lado,
+independientemente de si el marco es fijo o no. Con las dos piezas juntas
+(marco fijo + maximización automática) se resuelven los dos problemas a la
+vez.
+
+**Verificado en el navegador (con imágenes reales de proporciones
+extremas, no solo con los placeholders):** los placeholders SVG que genera
+la app ya vienen con proporciones parejas entre sí (ver punto 31), así que
+no hubieran mostrado el bug ni confirmado el arreglo. Se generaron 2 imágenes
+de prueba bien distintas (900×260 "ancha" y 280×780 "alta", con contenido
+real dibujado, no en blanco, para que la detección de "tinta" de la
+normalización tenga algo que medir) vía `System.Drawing`/PowerShell, se
+inyectaron directo en `localStorage` (`fuelle:customImages:v2`, mismo
+formato que usa `store.setCustomImage`) como los 2 pasos de un ejercicio de
+prueba, y se midió `.score-frame.getBoundingClientRect()` en cada paso:
+**235.6 × 256.65px en los dos casos, idéntico**, antes de este cambio el
+alto variaba entre pasos. Los datos de prueba (ejercicio + imágenes) se
+borraron de `localStorage` al terminar.

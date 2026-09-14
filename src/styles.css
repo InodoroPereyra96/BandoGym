@@ -637,10 +637,15 @@ input, select, textarea {
   min-height: 100%;
 }
 
-/* Decisión (ver DECISIONES.md punto 17): el marco ya no fuerza un
-   aspect-ratio fijo (4:3) — se ajusta al tamaño real de la imagen/SVG hasta
-   un tope de 60vh, en vez de dejar franjas en blanco cuando la proporción de
-   la imagen no coincide con la del marco. */
+/* El marco tenía un aspect-ratio fijo (4:3) que se sacó en su momento
+   porque dejaba franjas en blanco cuando la proporción de la imagen no
+   coincidía — de ahí quedó `max-height` en vez de una altura fija, "abrazando"
+   el tamaño de cada imagen. El problema de ese cambio (ver DECISIONES.md
+   punto 55): sin una altura fija, el marco varía de tamaño entre pasos según
+   la proporción de cada imagen — se nota mucho en vertical. Ahora que existe
+   la normalización/maximización automática (puntos 31 y 33, que ya agranda
+   cada imagen para llenar el marco lo más posible), un alto FIJO no
+   reintroduce franjas grandes: `height` en vez de `max-height`. */
 .score-frame {
   background: #f3ecdf;
   border-radius: var(--radius);
@@ -650,7 +655,7 @@ input, select, textarea {
   align-items: center;
   justify-content: center;
   position: relative;
-  max-height: 60vh;
+  height: 60vh;
 }
 
 .score-frame img,
