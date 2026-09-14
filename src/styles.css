@@ -847,18 +847,28 @@ input, select, textarea {
 .config-block-solo { margin-bottom: 18px; }
 .chip-row-center { margin-bottom: 0; justify-content: center; }
 
-/* ---------- Panel colapsable "ajustes avanzados" (ver DECISIONES.md ronda 6, punto 35) ----------
-   Agrupa acento + volúmenes (los controles "menos usados" según el pedido):
-   en horizontal arranca colapsado para que el resto entre sin scroll
-   vertical; en vertical arranca expandido (ver player.js, isLandscapeNow). */
+/* ---------- Botones de volumen independientes (ver DECISIONES.md punto 50) ----------
+   Reemplaza el panel único "⚙ Volumen" (que desplegaba los dos volúmenes
+   juntos, ronda 6 punto 35) por 2 botones en el mismo renglón, cada uno
+   desplegando solo su propio control. En horizontal arrancan colapsados
+   para que el resto entre sin scroll vertical; en vertical arrancan
+   expandidos (ver player.js, isLandscapeNow). */
 
-.advanced-toggle {
+.volume-toggle-row {
+  display: flex;
+  gap: 8px;
   margin: 12px 0;
 }
 
-.advanced-panel {
-  margin-bottom: 4px;
+.volume-toggle { flex: 1; }
+
+.volume-toggle.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--gold-ink);
 }
+
+#metroVolBlock, #demoVolBlock { margin-bottom: 14px; }
 
 /* ---------- Botones de pie de reproductor lado a lado (ver DECISIONES.md ronda 6, punto 35) ----------
    "Cargar foto" y "Terminar y calificar" van apilados en vertical (igual que
@@ -873,14 +883,9 @@ input, select, textarea {
 .footer-row > * { width: 100%; margin: 0; }
 
 /* ---------- Volumen independiente de metrónomo y audio demo ---------- */
-/* Ver DECISIONES.md punto 25. */
-
-.volume-row {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-bottom: 18px;
-}
+/* Ver DECISIONES.md punto 25. `.volume-row` (el contenedor que agrupaba los
+   2 controles antes del punto 50) se sacó: cada `.volume-block` ahora es
+   independiente, ya no comparten un wrapper. */
 
 .volume-block-label {
   display: flex;
@@ -1279,10 +1284,10 @@ body.is-player .app-shell {
   body.is-player .config-block-solo { padding: clamp(6px, 1.1vh, 12px); }
   body.is-player .player-config { margin-bottom: 0; gap: clamp(8px, 1.6vh, 16px); }
   body.is-player .config-block .config-label { font-size: clamp(0.62rem, 1.3vh, 0.8rem); margin: 0 0 clamp(2px, 0.5vh, 6px); }
-  /* `.section-title` no necesita margen propio en horizontal: ya sea como
-     hijo directo de `.player-side` o de `.advanced-panel`, el espaciado con
-     lo que viene antes/después ya lo da el `gap` del flex contenedor — un
-     margen extra acá lo duplicaría. */
+  /* `.section-title` no necesita margen propio en horizontal: como hijo
+     directo de `.player-side`, el espaciado con lo que viene antes/después
+     ya lo da el `gap` del flex contenedor — un margen extra acá lo
+     duplicaría. */
   body.is-player .section-title { font-size: clamp(0.62rem, 1.3vh, 0.8rem); margin: 0; }
 
   body.is-player .manual-hint { font-size: clamp(0.66rem, 1.4vh, 0.82rem); line-height: 1.3; }
@@ -1304,14 +1309,13 @@ body.is-player .app-shell {
   body.is-player .progress-segments { margin-bottom: 0; }
   body.is-player .progress-segment { height: clamp(5px, 0.9vh, 8px); }
 
-  body.is-player .advanced-toggle { min-height: clamp(30px, 5vh, 44px); padding: clamp(4px, 0.9vh, 8px) 14px; font-size: clamp(0.76rem, 1.5vh, 0.88rem); }
-  body.is-player .advanced-panel { display: flex; flex-direction: column; gap: clamp(4px, 1vh, 10px); }
-  body.is-player .advanced-panel > * { margin: 0; }
+  body.is-player .volume-toggle-row { margin: clamp(4px, 1vh, 10px) 0; }
+  body.is-player .volume-toggle { min-height: clamp(30px, 5vh, 44px); padding: clamp(4px, 0.9vh, 8px) 10px; font-size: clamp(0.7rem, 1.4vh, 0.85rem); }
+  body.is-player #metroVolBlock, body.is-player #demoVolBlock { margin-bottom: clamp(4px, 1vh, 10px); }
 
   body.is-player .audio-row { gap: clamp(4px, 0.9vh, 8px); }
   body.is-player .audio-chip { min-height: clamp(30px, 5vh, 44px); font-size: clamp(0.7rem, 1.4vh, 0.85rem); }
 
-  body.is-player .volume-row { gap: clamp(8px, 1.8vh, 16px); }
   body.is-player .volume-block-label { font-size: clamp(0.68rem, 1.3vh, 0.8rem); margin-bottom: clamp(2px, 0.5vh, 8px); }
   body.is-player input[type="range"] { height: clamp(4px, 0.7vh, 6px); }
   body.is-player input[type="range"]::-webkit-slider-thumb { width: clamp(18px, 2.6vh, 26px); height: clamp(18px, 2.6vh, 26px); }

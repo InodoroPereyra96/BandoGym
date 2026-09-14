@@ -35,13 +35,35 @@ import { attachPinchZoom } from '../zoom.js';
 let cleanupFn = null;
 const metronome = createMetronome();
 
-// Íconos de transporte (ver DECISIONES.md punto 46): reemplazan los
+// Íconos de transporte (ver DECISIONES.md puntos 46 y 50): reemplazan los
 // glyphs de emoji (▶ ⏸ ⏮ ⏭) por SVG propio, mismo trazo redondeado que el
-// resto de los íconos nuevos de la app (ver punto 45).
-const ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round"><path d="M7 4.8v14.4c0 .9 1 1.4 1.7.9l11-7.2c.6-.4.6-1.3 0-1.7l-11-7.2C8 3.4 7 3.9 7 4.8z"/></svg>';
-const ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4.5" height="16" rx="1.4"/><rect x="13.5" y="4" width="4.5" height="16" rx="1.4"/></svg>';
-const ICON_PREV = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="2.6" height="14" rx="1"/><path d="M18 6.2v11.6c0 .9-1 1.4-1.7.9l-8-5.8c-.6-.4-.6-1.3 0-1.8l8-5.8c.7-.5 1.7 0 1.7.9z"/></svg>';
-const ICON_NEXT = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="16.4" y="5" width="2.6" height="14" rx="1"/><path d="M6 6.2v11.6c0 .9 1 1.4 1.7.9l8-5.8c.6-.4.6-1.3 0-1.8l-8-5.8c-.7-.5-1.7 0-1.7.9z"/></svg>';
+// resto de los íconos nuevos de la app (ver punto 45). `width`/`height`
+// en "1em" son obligatorios acá — sin medida propia ni CSS que la fije,
+// el tamaño por defecto de un `<svg>` depende del navegador (Safari/iOS
+// lo renderiza roto/invisible; ver punto 50), y "1em" además lo escala
+// solo según el `font-size` del botón (`.icon-btn`/`.icon-btn-lg`).
+const ICON_PLAY = '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round"><path d="M7 4.8v14.4c0 .9 1 1.4 1.7.9l11-7.2c.6-.4.6-1.3 0-1.7l-11-7.2C8 3.4 7 3.9 7 4.8z"/></svg>';
+const ICON_PAUSE = '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><rect x="6" y="4" width="4.5" height="16" rx="1.4"/><rect x="13.5" y="4" width="4.5" height="16" rx="1.4"/></svg>';
+const ICON_PREV = '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><rect x="5" y="5" width="2.6" height="14" rx="1"/><path d="M18 6.2v11.6c0 .9-1 1.4-1.7.9l-8-5.8c-.6-.4-.6-1.3 0-1.8l8-5.8c.7-.5 1.7 0 1.7.9z"/></svg>';
+const ICON_NEXT = '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><rect x="16.4" y="5" width="2.6" height="14" rx="1"/><path d="M6 6.2v11.6c0 .9 1 1.4 1.7.9l8-5.8c.6-.4.6-1.3 0-1.8l-8-5.8c-.7-.5-1.7 0-1.7.9z"/></svg>';
+
+// Metrónomo (reemplaza el emoji 🔔, ver DECISIONES.md puntos 52-53): trazo,
+// no relleno, como el resto de los íconos de la familia — cuerpo
+// trapezoidal del metrónomo con el brazo/péndulo a mitad de oscilación.
+// "1.6em" (no "1em", ver punto 53): más grande que el texto del botón a
+// propósito, para que se note — sigue escalando con el `font-size` del
+// botón, solo que ya no calza 1:1 con la altura de línea del texto.
+const ICON_METRONOME = '<svg viewBox="0 0 24 24" width="1.6em" height="1.6em" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 20h8L14 5h-4L8 20z"/><path d="M12 7.5l3 11.5"/><circle cx="12" cy="7.5" r="1" fill="currentColor" stroke="none"/></svg>';
+// Mini-bandoneón (reemplaza el emoji 🎧 del audio de demostración, ver
+// DECISIONES.md puntos 52-53): el mismo motivo "fuelle" del separador del
+// topbar (puntos 45/47/48) en miniatura — zigzag plegado con 3 botones a
+// cada lado — en vez de dibujar el instrumento entero de nuevo. Un pliegue
+// más que la primera versión (3 picos/3 valles, no 3/2) y con los picos
+// subiendo de izquierda a derecha (curvado hacia arriba, como en el dibujo
+// del usuario) en vez de un zigzag parejo — los puntitos de cada extremo
+// acompañan esa altura para leerse como los botones reales del fuelle
+// doblado.
+const ICON_BANDONEON_MINI = '<svg viewBox="0 0 30 24" width="1.6em" height="1.6em" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10L9.6 19 13.2 7 16.8 17 20.4 4 24 15"/><circle cx="2.5" cy="8" r="1.1" fill="currentColor" stroke="none"/><circle cx="2.5" cy="13.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="2.5" cy="19" r="1.1" fill="currentColor" stroke="none"/><circle cx="27.5" cy="4" r="1.1" fill="currentColor" stroke="none"/><circle cx="27.5" cy="9.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="27.5" cy="15" r="1.1" fill="currentColor" stroke="none"/></svg>';
 
 function settingsKey(id) {
   return `fuelle:playerSettings:v2:${id}`;
@@ -309,19 +331,17 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
           </div>
         </div>
 
-        <button type="button" class="btn btn-outline btn-sm advanced-toggle" id="advancedToggle" aria-expanded="false"></button>
-        <div class="advanced-panel" id="advancedPanel" hidden>
-          <div class="section-title">Volumen</div>
-          <div class="volume-row">
-            <div class="volume-block" id="metroVolBlock">
-              <div class="volume-block-label"><span>🔔 Metrónomo</span><span class="value" id="metroVolValue"></span></div>
-              <input type="range" id="metroVolSlider" min="0" max="100" step="1" aria-label="Volumen del metrónomo" />
-            </div>
-            <div class="volume-block">
-              <div class="volume-block-label"><span>🎧 Audio de demostración</span><span class="value" id="demoVolValue"></span></div>
-              <input type="range" id="demoVolSlider" min="0" max="100" step="1" aria-label="Volumen del audio de demostración" />
-            </div>
-          </div>
+        <div class="volume-toggle-row">
+          <button type="button" class="btn btn-outline btn-sm volume-toggle" id="metroVolToggle" aria-expanded="false">${ICON_METRONOME} Metrónomo</button>
+          <button type="button" class="btn btn-outline btn-sm volume-toggle" id="demoVolToggle" aria-expanded="false">${ICON_BANDONEON_MINI} Audio demo</button>
+        </div>
+        <div class="volume-block" id="metroVolBlock" hidden>
+          <div class="volume-block-label"><span>Volumen del metrónomo</span><span class="value" id="metroVolValue"></span></div>
+          <input type="range" id="metroVolSlider" min="0" max="100" step="1" aria-label="Volumen del metrónomo" />
+        </div>
+        <div class="volume-block" id="demoVolBlock" hidden>
+          <div class="volume-block-label"><span>Volumen del audio de demostración</span><span class="value" id="demoVolValue"></span></div>
+          <input type="range" id="demoVolSlider" min="0" max="100" step="1" aria-label="Volumen del audio de demostración" />
         </div>
 
         <div class="section-title">Audio de demostración</div>
@@ -353,9 +373,10 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   const autoProgressBlock = container.querySelector('#autoProgressBlock');
   const autoConfigBlock = container.querySelector('#autoConfigBlock');
   const metroVolBlock = container.querySelector('#metroVolBlock');
+  const demoVolBlock = container.querySelector('#demoVolBlock');
+  const metroVolToggle = container.querySelector('#metroVolToggle');
+  const demoVolToggle = container.querySelector('#demoVolToggle');
   const manualHint = container.querySelector('#manualHint');
-  const advancedToggle = container.querySelector('#advancedToggle');
-  const advancedPanel = container.querySelector('#advancedPanel');
 
   metroVolSlider.value = Math.round(metronomeVolume * 100);
   demoVolSlider.value = Math.round(demoVolume * 100);
@@ -363,25 +384,37 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   demoVolValue.textContent = `${demoVolSlider.value}%`;
 
   /**
-   * Sección colapsable de "ajustes avanzados" (volúmenes — el acento se
-   * mudó a "Nuevo"/"Editar ejercicio", ver DECISIONES.md punto 42; en su
-   * momento también vivía acá, ver ronda 6, punto 35): en horizontal (donde
-   * todo tiene que entrar sin scroll vertical) arranca colapsada para minimizar la altura
-   * usada por defecto; en vertical (donde esta pantalla igual permite
-   * scroll) arranca expandida, como se veía antes de este cambio.
+   * Volumen del metrónomo y del audio de demostración: dos botones
+   * independientes en el mismo renglón, cada uno despliega/oculta SOLO su
+   * propio control — antes era un único botón "Volumen" que desplegaba los
+   * dos juntos (ver DECISIONES.md punto 50, pedido explícito de separarlos).
+   * En horizontal (donde todo tiene que entrar sin scroll vertical) arrancan
+   * colapsados; en vertical (donde esta pantalla igual permite scroll)
+   * arrancan expandidos — mismo criterio que ya usaba el panel único.
    */
   function isLandscapeNow() {
     return window.matchMedia && window.matchMedia('(orientation: landscape)').matches;
   }
-  let advancedOpen = !isLandscapeNow();
-  function syncAdvancedVisibility() {
-    advancedPanel.hidden = !advancedOpen;
-    advancedToggle.setAttribute('aria-expanded', String(advancedOpen));
-    advancedToggle.textContent = advancedOpen ? '⚙ Ocultar volumen' : '⚙ Volumen';
+  let metroVolOpen = !isLandscapeNow();
+  let demoVolOpen = !isLandscapeNow();
+  function syncVolumeToggles() {
+    const isManual = mode === 'manual'; // sin metrónomo en modo manual: no tiene sentido mostrar su volumen
+    metroVolToggle.hidden = isManual;
+    metroVolBlock.hidden = isManual || !metroVolOpen;
+    metroVolToggle.classList.toggle('active', metroVolOpen);
+    metroVolToggle.setAttribute('aria-expanded', String(metroVolOpen));
+
+    demoVolBlock.hidden = !demoVolOpen;
+    demoVolToggle.classList.toggle('active', demoVolOpen);
+    demoVolToggle.setAttribute('aria-expanded', String(demoVolOpen));
   }
-  advancedToggle.addEventListener('click', () => {
-    advancedOpen = !advancedOpen;
-    syncAdvancedVisibility();
+  metroVolToggle.addEventListener('click', () => {
+    metroVolOpen = !metroVolOpen;
+    syncVolumeToggles();
+  });
+  demoVolToggle.addEventListener('click', () => {
+    demoVolOpen = !demoVolOpen;
+    syncVolumeToggles();
   });
 
   // Modo manual (ver DECISIONES.md punto 32): tocar la partitura avanza o
@@ -581,9 +614,14 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
     )).join('');
   }
 
-  /** Único punto de avance de paso: llamado desde el callback de beat del
-   * metrónomo (ver handleBeat), nunca desde un timer aparte. */
-  function goTo(newIndex) {
+  /**
+   * Único punto de avance de paso: llamado desde el callback de beat del
+   * metrónomo (ver handleBeat), nunca desde un timer aparte — salvo el caso
+   * `manual: true` (ver DECISIONES.md punto 51), para los saltos que pide el
+   * propio usuario (⏮/⏭/cuadraditos) en vez del avance automático de fin de
+   * compás.
+   */
+  function goTo(newIndex, { manual = false } = {}) {
     if (newIndex >= pasos.length) {
       stopAll();
       showRatingOverlay(exercise, fromRoute, navigate);
@@ -591,6 +629,17 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
     }
     index = Math.max(0, newIndex);
     paintTonalidad();
+    // Salto manual en pleno play: el metrónomo seguía sonando con la fase
+    // vieja (el próximo click caía en el tiempo que le tocaba al paso
+    // ANTERIOR, no en el tiempo 1 del nuevo) — se reinicia el metrónomo para
+    // que el próximo click sea de verdad el tiempo 1 del paso nuevo. El
+    // avance automático (sin `manual: true`, disparado al llegar
+    // naturalmente al último tiempo del compás) no lo necesita: ya llega
+    // perfectamente alineado por construcción.
+    if (manual && phase === 'playing' && mode === 'auto') {
+      metronome.stop();
+      metronome.start({ bpm, accentEvery: acentoCada, volume: metronomeVolume, onBeat: handleBeat });
+    }
   }
 
   /**
@@ -660,7 +709,7 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
     modePicker.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c.dataset.mode === mode));
     autoProgressBlock.hidden = isManual;
     autoConfigBlock.hidden = isManual;
-    metroVolBlock.hidden = isManual;
+    syncVolumeToggles();
     manualHint.hidden = !isManual;
     playBtn.hidden = isManual;
   }
@@ -684,7 +733,6 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   window.addEventListener('keydown', onKeyDown);
 
   syncModeVisibility();
-  syncAdvancedVisibility();
   paintTonalidad();
   cleanupFn = () => {
     document.removeEventListener('fullscreenchange', onFsChange);
@@ -708,12 +756,12 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
     if (!btn) return;
     const target = Number(btn.dataset.step);
     if (target === index) return;
-    goTo(target);
+    goTo(target, { manual: true });
   });
 
   playBtn.addEventListener('click', togglePlay);
-  container.querySelector('#prevBtn').addEventListener('click', () => goTo(index - 1));
-  container.querySelector('#nextBtn').addEventListener('click', () => goTo(index + 1));
+  container.querySelector('#prevBtn').addEventListener('click', () => goTo(index - 1, { manual: true }));
+  container.querySelector('#nextBtn').addEventListener('click', () => goTo(index + 1, { manual: true }));
 
   /**
    * Cambia el BPM en vivo y lo propaga a todo lo que depende de él —

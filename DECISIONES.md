@@ -2131,3 +2131,229 @@ un solo archivo, sin tocar `index.html` de nuevo.
 **Verificado en el navegador:** se confirmó visualmente en Hoy que el
 motivo ondulado aparece de fondo en la tabbar, sutil (no compite con el
 texto), y que las 4 etiquetas siguen perfectamente legibles encima.
+
+## 50. Bug real: íconos de transporte invisibles en iPhone (sin `width`/`height`) + volumen de metrónomo/audio separados en 2 botones
+
+**Reporte del usuario:** los íconos de play/anterior/siguiente (punto 46)
+no se veían en su iPhone, pese a andar bien en este entorno de
+automatización — un caso real de "probado en el navegador de acá, pero no
+en el dispositivo real" (ver punto 33 y otros: esta es otra instancia del
+mismo patrón recurrente del proyecto).
+
+**Causa raíz encontrada:** `ICON_PLAY`/`ICON_PAUSE`/`ICON_PREV`/`ICON_NEXT`
+(punto 46) son `<svg>` sin atributos `width`/`height` propios, y no hay
+ninguna regla CSS que les dé un tamaño (a diferencia de `TIPO_ICON` en
+`ui.js`, que sí tenía `width="13" height="13"` explícito desde el punto 45
+— por eso esos íconos sí se veían bien en todos lados). Un `<svg>` sin
+tamaño propio ni CSS que lo fije cae al tamaño intrínseco por defecto del
+navegador (300×150 según el spec) — Chrome/el navegador de este entorno de
+automatización aparentemente lo escala para que quepa en el botón
+igual, pero Safari/iOS lo respeta más al pie de la letra: el resultado es
+un ícono roto o recortado a un pedazo en blanco dentro del botón de 44-72px,
+que se percibe como "no se ve nada".
+
+**Decisión:** se agregó `width="1em" height="1em"` a los 4 SVG. `1em` (no
+un valor fijo en `px`) es a propósito: escala solo según el `font-size` del
+botón que lo contiene (`.icon-btn` usa `1.3rem`, `.icon-btn-lg` —el botón
+grande de play— `1.8rem`), el mismo mecanismo que ya usaban los glyphs de
+emoji que reemplazaron (el tamaño de un carácter de texto también sigue el
+`font-size`) — así el ícono grande y los chicos quedan proporcionados entre
+sí sin necesitar dos constantes de ícono por tamaño.
+
+**Por qué no se detectó en verificaciones anteriores:** el punto 46 sí se
+"verificó en el navegador" (Chrome, vía este entorno), pero ese navegador
+resulta ser tolerante con este caso específico — jamás iba a reproducir un
+bug que depende del motor de renderizado exacto de Safari. Confirma, una
+vez más (ver puntos 17 y 33), que ninguna cantidad de verificación en este
+entorno reemplaza probar contra el dispositivo real cuando el bug depende
+del navegador en sí.
+
+---
+
+**Pedido aparte (mismo turno):** separar el único botón "⚙ Volumen" (punto
+35, que desplegaba juntos el volumen del metrónomo y el del audio de
+demostración) en 2 botones independientes, uno por control, en el mismo
+renglón — que cada uno despliegue/oculte solo su propio volumen.
+
+**Decisión (`player.js` + `styles.css`):**
+- `#advancedToggle`/`#advancedPanel` (un botón, un panel con los 2
+  controles adentro) se reemplazan por `#metroVolToggle`/`#demoVolToggle`
+  (`.volume-toggle-row`, `display:flex` para que queden lado a lado) más
+  `#metroVolBlock`/`#demoVolBlock` como bloques independientes, cada uno
+  con su propio estado abierto/cerrado (`metroVolOpen`/`demoVolOpen`,
+  antes había un solo `advancedOpen`) sincronizado por `syncVolumeToggles()`
+  (antes `syncAdvancedVisibility()`).
+- El estado "activo" (desplegado) de cada botón se muestra con la misma
+  clase `.active` que ya usan los chips de esta pantalla (fondo dorado) en
+  vez de cambiar el texto del botón como hacía el botón único ("⚙ Volumen"
+  → "⚙ Ocultar volumen") — con 2 botones, cambiar el texto de cada uno por
+  separado hubiera sido más ruido visual que una sola marca de "activo"
+  consistente con el resto de la app.
+- `metroVolToggle.hidden = isManual` (además de `metroVolBlock.hidden`, que
+  ya se ocultaba en modo manual desde el punto 32): en modo manual no suena
+  el metrónomo, así que ahora tampoco se muestra el botón para desplegar su
+  volumen — antes quedaba el control de acento... digo, el bloque de
+  volumen simplemente vacío/oculto dentro del panel único; con 2 botones
+  independientes, dejar el botón visible sin nada que desplegar hubiera
+  sido confuso.
+- Arrancan abiertos o cerrados por defecto con el mismo criterio que el
+  panel único (colapsados en horizontal, expandidos en vertical) — ahora
+  aplicado a cada uno por separado, pero con el mismo valor inicial
+  (`!isLandscapeNow()`) para los dos, así que en la práctica arrancan
+  siempre iguales entre sí; lo nuevo es que a partir de ahí cada toque los
+  desacopla.
+- Se sacó `.volume-row` (el `display:flex; flex-direction:column` que
+  agrupaba los 2 bloques dentro del panel único) — ya no hace falta, cada
+  bloque es independiente. `#metroVolBlock`/`#demoVolBlock` llevan su
+  propio `margin-bottom` en vez de heredarlo del `gap` del wrapper que ya
+  no existe.
+
+**Verificado en el navegador:** con un ejercicio de prueba de tipo escala,
+se confirmó que tocar "Metrónomo" despliega solo su slider (Audio demo
+queda cerrado), que tocar "Audio demo" después despliega el suyo SIN
+cerrar el de Metrónomo (los dos pueden estar abiertos a la vez), y que el
+estado "activo" de cada botón (fondo dorado) refleja correctamente si está
+desplegado. El ejercicio de prueba se borró de `localStorage` al terminar.
+
+## 51. Bug real: saltar de paso a mano en pleno play no resincronizaba el metrónomo
+
+**Reporte del usuario:** si mientras el metrónomo está sonando (dentro de
+un compás, ej. en el tiempo 2 de 4) el usuario salta de paso a mano (⏮/⏭ o
+un cuadradito), el paso cambia pero el metrónomo sigue sonando con la fase
+vieja — el próximo click cae en el tiempo que le tocaba al PASO ANTERIOR
+(ej. sigue por "tiempo 3, tiempo 4" de la cuenta vieja) en vez de arrancar
+de nuevo en el tiempo 1 del paso nuevo.
+
+**Causa raíz:** `goTo()` (llamado tanto por el avance automático al llegar
+al final de un compás como por los saltos manuales del usuario) reseteaba
+`beatsElapsedInPaso` a 0 — así lo dejó el punto 35 — pero nunca tocaba el
+reloj del propio metrónomo (`metronome.js`, `nextNoteTime`/`beatCount`),
+que sigue una cuenta continua e independiente desde que arrancó a sonar.
+Reiniciar el CONTADOR de la app sin reiniciar el RELOJ que genera los
+clicks solo cambia la etiqueta que se le pone al próximo click ("ahora
+contá como tiempo 1"), no cuándo va a sonar — y ese "próximo click" seguía
+siendo el que le correspondía al compás viejo. Para el avance AUTOMÁTICO
+(el que dispara `handleBeat` al llegar naturalmente al último tiempo del
+compás) esto nunca fue un problema: ahí el próximo click YA es,
+naturalmente, el tiempo 1 del paso siguiente, así que no hacía falta tocar
+el reloj. El bug es específico del salto manual, que puede pasar en
+CUALQUIER punto del compás.
+
+**Decisión:** `goTo()` gana un segundo parámetro, `{ manual: false }` por
+defecto. Cuando se llama con `manual: true` (desde los handlers de ⏮/⏭ y
+de los cuadraditos — no desde el avance automático de `handleBeat`, que
+sigue llamando `goTo()` sin ese flag) y el reproductor está efectivamente
+sonando en modo automático (`phase === 'playing' && mode === 'auto'`), se
+reinicia el metrónomo de verdad: `metronome.stop()` seguido de
+`metronome.start({ bpm, accentEvery: acentoCada, volume: metronomeVolume,
+onBeat: handleBeat })` — esto resetea `nextNoteTime` a "ahora + 60ms" y
+`beatCount` a 0 adentro de `metronome.js`, así el próximo click suena
+prácticamente de inmediato y es, de verdad, el tiempo 1 del paso nuevo. Los
+saltos del modo manual (toque en la partitura, teclas/pedal — ver puntos 32
+y 36) no necesitaron ningún cambio: ya estaban guardados por
+`if (mode !== 'manual') return;` en sus propios handlers, y de todos modos
+en modo manual no hay metrónomo sonando (la condición `mode === 'auto'`
+adentro de `goTo` los excluye igual si alguna vez se les agregara el flag).
+
+**Por qué no se detectó antes:** el punto 35 (que agregó los cuadraditos
+tocables) se verificó saltando "a mitad de una reproducción activa" y
+confirmando que "el total de segmentos... cambió al instante... y el
+conteo arrancó de 0" — esa verificación es real y correcta, pero se quedó
+corta: confirma que el CONTADOR de la app arranca de 0, no que el AUDIO
+también resincroniza. Hacía falta el reporte de un uso real, con el oído
+puesto en el metrónomo mientras se salta, para notar la diferencia entre
+"la barra de progreso se resetea" y "el click realmente vuelve a caer en
+el tiempo 1".
+
+**Tradeoff aceptado:** `metronome.stop()` no cancela los clicks de audio
+que ya estaban agendados en el motor de Web Audio hasta
+`SCHEDULE_AHEAD_SEC` (120ms) hacia adelante — en el peor caso, un click
+"viejo" ya agendado justo antes del salto todavía se alcanza a escuchar,
+superpuesto con el reinicio. Es un margen de hasta 120ms, prácticamente
+imperceptible, y muy preferible a que el metrónomo quede desincronizado
+durante el resto del paso — no se agregó lógica extra a `metronome.js`
+para cancelar esos osciladores puntuales porque el costo/beneficio no lo
+justifica para un caso tan acotado.
+
+**Verificado en el navegador:** con un ejercicio de prueba de 3 pasos
+(compás 4/4, 2 compases por paso), se arrancó el play, se esperó a estar a
+mitad del Paso 2, y se tocó el cuadradito del Paso 3 — el paso cambió y la
+cuenta de tiempos completados volvió a arrancar desde cerca de 0 (no
+continuó desde donde iba el Paso 2), sin errores en consola. El ejercicio
+de prueba se borró de `localStorage` al terminar.
+
+## 52. Íconos propios para "Metrónomo" (reemplaza 🔔) y "Audio demo" (reemplaza 🎧, mini-bandoneón)
+
+**Pedido:** el usuario mandó un dibujo a mano (un zigzag de varios picos con
+3 puntitos verticales en cada extremo) pidiendo dos cosas: (1) un trazo
+propio, consistente con el resto de los íconos nuevos, para la campanita
+🔔 del botón "Metrónomo"; (2) un símbolo chico de bandoneón —basado en ese
+mismo dibujo— para reemplazar los auriculares 🎧 del botón "Audio demo".
+
+**Decisión (`player.js`):**
+- `ICON_METRONOME`: pictograma de metrónomo de verdad (no relacionado con
+  el zigzag) — cuerpo trapezoidal (la caja del metrónomo) con un brazo
+  diagonal simulando el péndulo a mitad de oscilación y un puntito en el
+  pivote. Trazo (`stroke`), no relleno, como el resto de la familia de
+  íconos (puntos 45/46) — no como los íconos de transporte del punto 46,
+  que son rellenos a propósito por tratarse de controles primarios que
+  necesitan más peso visual.
+- `ICON_BANDONEON_MINI`: en vez de inventar un dibujo nuevo desde cero, es
+  el mismo motivo "fuelle" que ya usan el separador del topbar (puntos 45/
+  47/48) y el ícono de tipo "Fuelle" (punto 45) — zigzag plegado + 3
+  botones a cada lado— pero miniaturizado a 24×24 para caber al lado de un
+  texto de botón. Reusar el motivo en vez de dibujar el bandoneón "de
+  frente" otra vez mantiene una sola idea visual para "esto es un fuelle/
+  bandoneón" en toda la app, en lugar de dos símbolos distintos que
+  signifiquen lo mismo.
+- Los dos siguen el mismo patrón de `width="1em" height="1em"` que ya
+  corrigió el punto 50 (sin esto, roto/invisible en Safari) — se
+  agregaron junto a `ICON_PLAY`/etc. en el mismo bloque de constantes, no
+  sueltos en otro lado del archivo.
+- Solo se usan en `#metroVolToggle`/`#demoVolToggle` (los dos únicos
+  lugares donde aparecían 🔔/🎧 en todo el código) — no hay otro botón de
+  volumen en la app que necesitara el mismo cambio.
+
+**Verificado en el navegador:** con un ejercicio de prueba de tipo escala,
+se confirmó que ambos íconos se ven junto a "Metrónomo"/"Audio demo" (ni
+rotos ni vacíos), sin errores nuevos en consola. El ejercicio de prueba se
+borró de `localStorage` al terminar.
+
+## 53. Íconos de metrónomo/audio demo más grandes; mini-bandoneón con un pliegue más y curvado hacia arriba
+
+**Pedido:** afinar los 2 íconos del punto 52, ya probados. (1) Que sean más
+grandes en relación al botón, para notarse más. (2) Al mini-bandoneón
+puntualmente: agregarle un pliegue más, y curvar el zigzag hacia arriba
+—picos cada vez más altos de izquierda a derecha, como en el dibujo
+original del usuario— en vez de un zigzag parejo, simulando el fuelle
+doblado/comprimido.
+
+**Decisión (`player.js`):**
+- Tamaño: `width`/`height` pasan de `1em` a `1.6em` en los dos íconos —
+  siguen atados al `font-size` del botón (`.volume-toggle`, ver punto 50:
+  por qué `em` y no un `px` fijo), solo que ahora el ícono es
+  deliberadamente más grande que la altura de línea del texto en vez de
+  calzar 1:1 con ella.
+- Mini-bandoneón: pasa de 5 puntos/4 segmentos (3 picos, 2 valles) a 6
+  puntos/5 segmentos (3 picos, 3 valles) — el pliegue de más pedido — y los
+  3 picos ya no están a la misma altura: suben de izquierda a derecha
+  (`y=10 → 7 → 4`), los valles acompañan la misma tendencia (`y=19 → 17 →
+  15`) — el conjunto se lee como una tira plegada que se va curvando hacia
+  arriba, no un zigzag repetitivo. El `viewBox` pasa de `24×24` a `30×24`
+  (más ancho, para que el pliegue extra entre sin apretar los demás) y los
+  2 grupos de 3 puntitos de los extremos se reacomodaron en altura para
+  seguir estando centrados en el tramo de zigzag que tienen al lado (el
+  extremo izquierdo, más bajo, con puntitos en `y=8/13.5/19`; el derecho,
+  más alto, en `y=4/9.5/15`) en vez de compartir la misma altura fija de
+  antes — así siguen leyéndose como "los botones de ESE lado" y no quedan
+  descolgados del dibujo.
+- El ícono de metrónomo (el otro símbolo del punto 52) solo cambió de
+  tamaño (`1em` → `1.6em`), no de forma — el pedido de "curvarlo" era
+  específico del mini-bandoneón.
+
+**Verificado en el navegador:** con un ejercicio de prueba de tipo escala,
+se confirmó que los 2 íconos se ven notoriamente más grandes junto a
+"Metrónomo"/"Audio demo" sin romper el layout del botón, y que el
+mini-bandoneón muestra el zigzag de 3 picos ascendentes con los 2 grupos de
+puntitos a los costados. El ejercicio de prueba se borró de `localStorage`
+al terminar.
