@@ -14,7 +14,6 @@
 
 import {
   TONALIDADES_MENORES_12,
-  DIRECCIONES_FUELLE,
   BPM_OPTIONS,
   BPM_MIN,
   BPM_MAX,
@@ -89,18 +88,18 @@ export function makePasoEntry(groupId, etiqueta, orden, compases) {
 }
 
 /**
- * Genera el esqueleto de 24 pasos de "Arpegios menores": 12 tonalidades
- * menores × abriendo/cerrando, en orden. El usuario completa después la
- * imagen (y opcionalmente el audio) de cada paso. Ver DECISIONES.md punto 15.
+ * Genera el esqueleto de 12 pasos de "Arpegios menores": una tonalidad por
+ * paso. Cada imagen contiene el sistema "abriendo" y el "cerrando" de esa
+ * tonalidad apilados en una sola foto (recortados del PDF con el mismo
+ * molde). El usuario completa después la imagen (y opcionalmente el audio)
+ * de cada paso. Ver DECISIONES.md puntos 15 y 56.
  */
 export function generateArpegioMenorPasos(groupId, compases) {
   const pasos = [];
   let orden = 0;
   for (const tonalidad of TONALIDADES_MENORES_12) {
-    for (const direccion of DIRECCIONES_FUELLE) {
-      pasos.push(makePasoEntry(groupId, `${tonalidad} ${direccion}`, orden, compases));
-      orden++;
-    }
+    pasos.push(makePasoEntry(groupId, tonalidad, orden, compases));
+    orden++;
   }
   return pasos;
 }

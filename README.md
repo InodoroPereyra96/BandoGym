@@ -159,10 +159,11 @@ src/
   "Arpegios menores"; cada fila se puede corregir después de forma
   independiente. Un ejercicio de tipo "Arpegio" nombrado exactamente
   "Arpegios menores" (cualquiera sea su articulación) muestra un botón que
-  genera automáticamente el esqueleto de 24 pasos (12 tonalidades menores ×
-  abriendo/cerrando) listo para completar con imágenes, y queda agrupado
-  con las demás variantes de ese mismo nombre y nivel en "Hoy" (ver
-  DECISIONES.md puntos 15 y 38). El audio de demostración por paso se carga
+  genera automáticamente el esqueleto de 12 pasos (uno por tonalidad menor,
+  con el sistema abriendo y el cerrando apilados en la misma imagen) listo
+  para completar con imágenes, y queda agrupado con las demás variantes de
+  ese mismo nombre y nivel en "Hoy" (ver DECISIONES.md puntos 15, 38 y 56).
+  El audio de demostración por paso se carga
   después, desde el reproductor (ver DECISIONES.md punto 20).
 - **Perfil**: selector de nivel (principiante/intermedio/avanzado) y resumen
   de progreso, con botón para reiniciar el progreso guardado.

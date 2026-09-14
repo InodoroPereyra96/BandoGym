@@ -28,8 +28,9 @@ export const TONALIDADES_AVANZADO = [
 ];
 
 // Las 12 tonalidades menores (todas las clases de altura), usadas para generar
-// automáticamente los 24 pasos (12 tonalidades × abriendo/cerrando) de
-// "Arpegios menores". Ver DECISIONES.md punto 15.
+// automáticamente los 12 pasos (uno por tonalidad, con abriendo y cerrando
+// apilados en la misma imagen) de "Arpegios menores". Ver DECISIONES.md
+// puntos 15 y 56.
 export const TONALIDADES_MENORES_12 = [
   'La menor', 'Mi menor', 'Si menor', 'Fa# menor', 'Do# menor', 'Sol# menor',
   'Reb menor', 'Lab menor', 'Mib menor', 'Sib menor', 'Fa menor', 'Do menor',

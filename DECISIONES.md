@@ -2451,3 +2451,75 @@ prueba, y se midió `.score-frame.getBoundingClientRect()` en cada paso:
 **235.6 × 256.65px en los dos casos, idéntico**, antes de este cambio el
 alto variaba entre pasos. Los datos de prueba (ejercicio + imágenes) se
 borraron de `localStorage` al terminar.
+
+## 56. Recorte automático del PDF de partitura ("un molde") + Arpegios menores pasa de 24 a 12 pasos
+
+**Pedido:** a raíz del punto 55, el usuario preguntó si convenía recortar
+él mismo cada imagen "con un molde" para que el margen del pentagrama caiga
+siempre igual. Aclaró que todas sus imágenes son capturas de pantalla de un
+PDF que él mismo armó (no fotos), y compartió ese PDF (ejercicio "Arpegios
+menores nota repetida", 6 páginas). Pidió automatizar el recorte en vez de
+seguir cortando a mano.
+
+**Decisión:** se escribió un script en Python (`auto_crop_partitura.py`,
+fuera del repo/app — es una herramienta de autoría que se corre una vez por
+PDF, no algo que la PWA necesite en runtime) que:
+1. Rasteriza cada página del PDF a 216dpi (`pymupdf`).
+2. Detecta la posición real de cada pentagrama por página: busca filas de
+   píxeles casi 100% oscuras que cruzan todo el ancho (una línea de
+   pentagrama), las agrupa de a 5 (un pentagrama) y las agrupa de a 2
+   (violín+bajo = un sistema), separando sistemas distintos por el hueco
+   más grande entre pentagramas consecutivos (el hueco violín→bajo de un
+   mismo sistema es siempre mucho menor que el hueco entre sistemas —el
+   punto de corte se calcula buscando el mayor salto entre huecos
+   ordenados, no un umbral fijo a mano).
+3. Recorta cada sistema con un margen fijo (120px arriba para el símbolo de
+   fuelle ⊓/V y los números de dedos, 50px abajo para notas con líneas
+   adicionales, definido una sola vez a partir de inspeccionar varias
+   páginas), usando el ancho real del contenido de ese sistema.
+4. Apila de a 2 sistemas consecutivos (⊓ + V de la misma tonalidad) en una
+   sola imagen final = 1 paso.
+
+De paso, `generateArpegioMenorPasos()` (`data.js`) pasó de generar 24 pasos
+(12 tonalidades × abriendo/cerrando, cada dirección una imagen separada) a
+generar 12 (una tonalidad por paso, con abriendo y cerrando ya combinados
+en la imagen). Se actualizó todo el texto visible que mencionaba "24 pasos"
+o "abriendo/cerrando" como pasos separados (botón, subtítulo, ayudas de
+campo) en `newExercise.js`, más los comentarios en `theory.js` y `README.md`.
+
+**Por qué:** al medir la posición de los 8 pentagramas (4 sistemas × 2)
+en las 6 páginas del PDF del usuario, salieron **prácticamente idénticas
+página a página** (variación de ±1-2px, ruido de rasterizado, no del
+contenido) — esperable porque es un PDF generado por software de notación
+con una plantilla de página fija, no un escaneo. Eso permite un recorte
+100% automático y consistente sin tocar coordenadas a mano por imagen, que
+es justo lo que el usuario pedía con "un molde". Se prefirió detectar los
+pentagramas en vez de usar coordenadas fijas para que el mismo script sirva
+con cualquier PDF futuro del usuario hecho con el mismo flujo de trabajo,
+aunque cambie el contenido musical.
+
+Sobre 12 vs 24 pasos: el nombre del propio PDF ("12 pasos arp menor...") y
+el pedido explícito del usuario señalaban que cada paso debía mostrar
+abriendo+cerrando juntos (una imagen por tonalidad), pero el código real
+generaba 24 (una imagen por dirección) — se le señaló la contradicción
+antes de tocar nada y confirmó: 12 pasos, 2 sistemas apilados por imagen.
+`direccion` (abriendo/cerrando) no se usaba en ningún otro lado del código
+más que para armar la etiqueta del paso, así que el cambio es seguro (no
+afecta metrónomo, audio ni nada del reproductor).
+
+**Nota importante (no resuelta por este cambio):** las imágenes de cada
+paso viven como `data:` URL en `localStorage` del dispositivo (ver
+store.js), no como archivos del repo — no hay forma de "subirlas" desde
+acá ni de tocar el ejercicio ya cargado en el iPhone del usuario de forma
+remota. Las 12 imágenes finales se le entregaron al usuario (vía
+`SendUserFile`) para que las suba a mano, una por paso, desde el
+formulario de edición en su propio dispositivo — ahí es donde vive su
+ejercicio real "Arpegios menores nota repetida".
+
+**Verificado en el navegador:** con tipo "Arpegio" y nombre "Arpegios
+menores", el botón "Generar" ahora crea exactamente 12 filas en la lista
+de pasos (antes 24); sin errores de consola nuevos. El script se corrió de
+punta a punta sobre el PDF real del usuario: generó 12 imágenes, las 12 de
+exactamente el mismo tamaño en píxeles (1668×872), revisadas visualmente
+varias (incluida la última página) sin que se cortara ningún número de
+dedo, símbolo de fuelle ni nota grave.

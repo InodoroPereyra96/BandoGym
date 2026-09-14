@@ -11,8 +11,9 @@
 // menores" (insensible a mayúsculas/espacios), el ejercicio queda taggeado
 // como parte del grupo especial "Arpegios menores" —sin importar qué
 // articulación tenga— y aparece un botón para generar automáticamente el
-// esqueleto de 24 pasos (12 tonalidades menores × abriendo/cerrando) en vez
-// de cargarlos a mano.
+// esqueleto de 12 pasos (uno por tonalidad menor, con el sistema abriendo y
+// el cerrando apilados en la misma imagen — ver DECISIONES.md punto 56) en
+// vez de cargarlos a mano.
 //
 // Decisión (ver DECISIONES.md punto 28): este mismo formulario sirve para
 // EDITAR un ejercicio ya cargado (nivel, tipo, nombre, articulación, compás
@@ -59,7 +60,7 @@ export function render(container, { param, navigate }) {
   container.innerHTML = `
     <p class="subtitle">${isEdit
       ? 'Editá nivel, tipo, nombre, articulación, compás y los pasos/imágenes de este ejercicio.'
-      : 'Cargá un ejercicio nuevo. Podés subir varias imágenes (una por cada tonalidad/dirección de fuelle) dentro de esta misma entrada.'}</p>
+      : 'Cargá un ejercicio nuevo. Podés subir varias imágenes (una por cada paso) dentro de esta misma entrada.'}</p>
 
     <form id="newForm">
       <div class="field">
@@ -116,7 +117,7 @@ export function render(container, { param, navigate }) {
 
       <div class="field" id="compasesField">
         <label for="f-compases">Compases por defecto para pasos nuevos</label>
-        <div class="field-hint">Cada paso tiene su propio campo de compases (más abajo, en su fila) porque puede durar una cantidad distinta — este valor solo se usa como punto de partida al agregar un paso nuevo o generar los 24 de "Arpegios menores".</div>
+        <div class="field-hint">Cada paso tiene su propio campo de compases (más abajo, en su fila) porque puede durar una cantidad distinta — este valor solo se usa como punto de partida al agregar un paso nuevo o generar los 12 de "Arpegios menores".</div>
         <div class="stepper">
           <button type="button" class="icon-btn" id="compDown">−</button>
           <div class="stepper-value" id="compValue">${compases}</div>
@@ -149,8 +150,8 @@ export function render(container, { param, navigate }) {
 
       <div class="field" id="pasosField">
         <label>Pasos (imágenes en secuencia)</label>
-        <div class="field-hint">Cada paso es una imagen (ej. "Am abriendo", "Am cerrando", "Bbm abriendo"…). El reproductor los recorre en este orden.</div>
-        <button type="button" class="btn btn-outline btn-sm" id="generarArpegioBtn" hidden style="margin:10px 0;">✨ Generar 24 pasos (12 tonalidades × abriendo/cerrando)</button>
+        <div class="field-hint">Cada paso es una imagen (ej. "La menor", "Mi menor"…). El reproductor los recorre en este orden.</div>
+        <button type="button" class="btn btn-outline btn-sm" id="generarArpegioBtn" hidden style="margin:10px 0;">✨ Generar 12 pasos (una tonalidad por paso)</button>
         <div id="pasosList"></div>
         <button type="button" class="btn btn-outline btn-sm" id="addPasoBtn" style="margin-top:8px;">+ Agregar paso</button>
       </div>
@@ -213,7 +214,7 @@ export function render(container, { param, navigate }) {
 
     // El aviso bajo "Nombre" (cómo entrar al grupo) se muestra para
     // cualquier arpegio, sin importar el nombre actual; el resto (botón de
-    // generar 24 pasos + confirmación de que YA quedó agrupado) solo cuando
+    // generar 12 pasos + confirmación de que YA quedó agrupado) solo cuando
     // el nombre efectivamente coincide.
     nombreArpegioMenorHint.hidden = tipoSel.value !== 'arpegio';
     const especial = esArpegioMenorPorNombre();
@@ -397,7 +398,7 @@ export function render(container, { param, navigate }) {
   generarArpegioBtn.addEventListener('click', () => {
     pasos = generateArpegioMenorPasos(exercise.id, compases);
     paintPasos();
-    toast('Se generaron 24 pasos. Completá la imagen de cada uno cuando la tengas.');
+    toast('Se generaron 12 pasos. Completá la imagen de cada uno cuando la tengas.');
   });
 
   paintPasos();
