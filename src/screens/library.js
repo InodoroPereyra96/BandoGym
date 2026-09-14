@@ -2,7 +2,7 @@
 
 import * as store from '../store.js';
 import { NIVELES, NIVEL_LABEL, TIPOS, TIPO_LABEL, GRUPO_ARPEGIOS_MENORES, NOMBRE_GRUPO_ARPEGIOS_MENORES } from '../theory.js';
-import { articulacionBadge, nivelBadge, fmtMin } from '../ui.js';
+import { articulacionBadge, nivelBadge, tipoBadge, fmtMin } from '../ui.js';
 import { computeGroupDurationMin } from '../data.js';
 
 let filters = { nivel: 'todos', tipo: 'todos' };
@@ -53,7 +53,7 @@ export function render(container, { navigate }) {
             <div class="card-title">${ex.nombre}</div>
             <div class="card-meta">
               ${nivelBadge(ex.nivel)}
-              <span class="badge badge-tipo">${TIPO_LABEL[ex.tipo]}</span>
+              ${tipoBadge(ex.tipo)}
               ${articulacionBadge(ex.tipo === 'fuelle' ? null : ex.articulacion)}
               ${esArpegioMenor ? `<span class="badge badge-tipo">${NOMBRE_GRUPO_ARPEGIOS_MENORES}</span>` : ''}
               <span>${dur}</span>

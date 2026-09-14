@@ -18,12 +18,28 @@ export function toast(message) {
   toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
 }
 
+// Ícono de nivel: un disco de pesas (círculo + barra), guiño al concepto de
+// "gimnasio para bandoneonistas" (ver DECISIONES.md punto 45). Usa
+// stroke="currentColor" para heredar el color de `.badge-<nivel>` sin
+// necesitar una variante por nivel.
+const NIVEL_PLATE_ICON = '<svg class="badge-icon" viewBox="0 0 20 20" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><path d="M6 10h8"/></svg>';
+
+// Íconos de tipo de ejercicio (ver DECISIONES.md punto 45): una escalerita
+// para "Escala", los mismos escalones pero como puntos sueltos para
+// "Arpegio" (mismo origen visual, distinta idea: nota continua vs. notas
+// separadas) y los dos extremos + pliegues del bandoneón para "Fuelle".
+const TIPO_ICON = {
+  escala: '<svg class="badge-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h6v-6h6v-6h6v-6"/></svg>',
+  arpegio: '<svg class="badge-icon" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="none"><circle cx="4.5" cy="20" r="2.3"/><circle cx="12" cy="12.5" r="2.3"/><circle cx="19.5" cy="5" r="2.3"/></svg>',
+  fuelle: '<svg class="badge-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="5" height="16" rx="1"/><rect x="17" y="4" width="5" height="16" rx="1"/><path d="M7 7h10M7 11h10M7 15h10"/></svg>',
+};
+
 export function nivelBadge(nivel) {
-  return `<span class="badge badge-${nivel}">${NIVEL_LABEL[nivel] || nivel}</span>`;
+  return `<span class="badge badge-${nivel}">${NIVEL_PLATE_ICON}${NIVEL_LABEL[nivel] || nivel}</span>`;
 }
 
 export function tipoBadge(tipo) {
-  return `<span class="badge badge-tipo">${TIPO_LABEL[tipo] || tipo}</span>`;
+  return `<span class="badge badge-tipo">${TIPO_ICON[tipo] || ''}${TIPO_LABEL[tipo] || tipo}</span>`;
 }
 
 export function articulacionBadge(articulacion) {

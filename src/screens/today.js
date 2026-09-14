@@ -2,8 +2,8 @@
 // repetición espaciada. Orden de pasos fijo (ritual); contenido variable.
 
 import * as store from '../store.js';
-import { NIVEL_LABEL, TIPO_LABEL, ARTICULACION_LABEL, GRUPO_ARPEGIOS_MENORES, NOMBRE_GRUPO_ARPEGIOS_MENORES } from '../theory.js';
-import { articulacionBadge, fmtMin, toast } from '../ui.js';
+import { NIVEL_LABEL, ARTICULACION_LABEL, GRUPO_ARPEGIOS_MENORES, NOMBRE_GRUPO_ARPEGIOS_MENORES } from '../theory.js';
+import { articulacionBadge, tipoBadge, fmtMin, toast } from '../ui.js';
 import { computeGroupDurationMin } from '../data.js';
 
 const TIME_OPTIONS = [15, 30, 45];
@@ -69,7 +69,7 @@ export function render(container, { navigate }) {
           <button class="card-tappable step-body" data-open="${ex.id}" style="border:none;padding:0;background:transparent;">
             <div class="card-title">${titulo}</div>
             <div class="card-meta">
-              <span class="badge badge-tipo">${TIPO_LABEL[step.tipo]}</span>
+              ${tipoBadge(step.tipo)}
               ${articulacionBadge(ex.articulacion)}
               <span>${dur}</span>
             </div>

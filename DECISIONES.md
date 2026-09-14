@@ -1826,3 +1826,103 @@ Práctica: label + valor arriba, barra abajo) con cero CSS adicional.
 y el label salten a "60 BPM" al instante — tanto leyendo el DOM
 (`#bpmSlider.value`) como visualmente. Los datos de prueba (ejercicio y
 audio sembrado) se borraron de `localStorage` al terminar.
+
+## 45. Rediseño visual "fuelle-pentagrama": paleta, íconos de tipo y Biblioteca/Hoy como lista
+
+**Contexto:** el usuario pidió explorar direcciones estéticas nuevas para la
+app (ver la sesión de diseño con Claude Design — 5 direcciones sobre la
+pantalla de Biblioteca, más una hoja de íconos), sintiendo que el look
+original era "un poco genérico" para una app pensada específicamente para
+bandoneonistas. De esas direcciones, la elegida fue una mezcla entre la
+"A" (cuero, con el fuelle como separador en zigzag) y la "D" (minimalista,
+tipografía editorial, filas separadas por líneas finas en vez de tarjetas) —
+con el separador de la "D" convertido en un fuelle real (plegado, no una
+línea recta), más 3 íconos de tipo de ejercicio (Escala/Arpegio/Fuelle) y la
+insignia de nivel convertida en un disquito de pesa (guiño a "gimnasio para
+bandoneonistas"). Este punto documenta cómo se llevó esa dirección del
+lienzo de diseño al código real.
+
+**Alcance acordado con el usuario, explícito antes de tocar código:**
+Biblioteca y "Hoy" (las dos pantallas que listan ejercicios) adoptan el
+estilo de fila sin tarjeta; "Nuevo ejercicio"/"Editar"/Perfil (formularios)
+solo cambian de paleta/tipografía, sin tocar su estructura de campos/chips
+— no todo tenía sentido convertirlo a "lista".
+
+**Decisión — paleta y tipografía (`styles.css`, `:root`):**
+- Superficies/texto pasan de los tonos bordó (`#1a0d10`/`#2a161c`/...) a una
+  paleta más neutra, marrón-carbón (`#151312`/`#1b1918`/`#efe9e1`/...) —
+  la misma que se probó en las direcciones D/A+D del lienzo. `--gold` y
+  `--wine` NO cambiaron: siguen siendo el hilo conductor con la identidad
+  anterior (dorado como acento principal, bordó reservado para "Terminar y
+  calificar" y el botón "Volver" flotante de Práctica), evitando que se
+  sienta como una app completamente distinta.
+- `--lvl-avanzado` pasa de un bordó (`#a8394a`, muy parecido a `--wine`) a
+  un terracota (`#c97a5a`) — en la paleta vieja el nivel "Avanzado" y el
+  botón de "Terminar" casi compartían color por coincidencia; ahora son
+  visualmente distintos a propósito.
+- **Tipografía: sigue sin haber Google Fonts** (ver punto 3, que sigue
+  vigente y por la misma razón: el service worker solo cachea pedidos del
+  mismo origen — `event.request.url.startsWith(self.location.origin)` en
+  `service-worker.js` — así que una fuente externa se vería bien la primera
+  vez online y fallaría en silencio (cae al fallback) en cada apertura
+  offline después, para una app cuyo valor central es funcionar sin
+  conexión). El look "editorial" de la dirección D se logró con
+  `font-style: italic` sobre el mismo `--font-serif` (Georgia) de siempre,
+  aplicado solo a `.topbar-title` — el resto de los títulos (`.card-title`,
+  etc.) sigue en redonda para no perder legibilidad en una lista larga.
+
+**Decisión — separador "fuelle" (`index.html` + `styles.css`):**
+El borde inferior plano del topbar se reemplaza por un SVG de 4 líneas
+onduladas/plegadas (`.fuelle-divider`, insertado una sola vez en
+`index.html` dentro de `<header class="topbar">`, así aparece en todas las
+pantallas sin tocar cada archivo de pantalla) — se lee como pentagrama de
+lejos y como pliegues de fuelle de cerca. Se oculta junto con el resto del
+topbar en Práctica horizontal (mismo bloque `body.is-player .topbar` del
+punto 41).
+
+**Decisión — íconos de tipo + insignia de nivel (`ui.js`):**
+- `TIPO_ICON` (nuevo, en `ui.js`): un mini-SVG por tipo — escalerita de 3
+  escalones para "Escala", los mismos 3 escalones pero como puntos sueltos
+  para "Arpegio" (mismo origen visual: fue un pedido explícito del usuario
+  que se vieran "emparentados"; se ajustó primero a 4 puntos y después a 3
+  más separados, tras probarlo en el lienzo, para que no se vea "manchado" a
+  tamaño chico), y los dos extremos + pliegues del bandoneón para "Fuelle".
+  `tipoBadge()` (ya existía en `ui.js` pero **no se usaba en ningún lado** —
+  tanto `library.js` como `today.js` armaban el badge de tipo a mano, texto
+  suelto sin pasar por el helper) ahora sí se usa desde los dos lugares,
+  con el ícono prepandido — de paso deduplica ese markup.
+- `nivelBadge()` prepende un disquito de pesa (círculo + barra,
+  `stroke="currentColor"`) antes del texto del nivel — hereda el color de
+  `.badge-<nivel>` sin necesitar una variante de ícono por nivel.
+- `.badge` pasa de `display:inline-block` a `inline-flex` con `gap:4px`
+  para que ícono y texto queden alineados.
+
+**Decisión — Biblioteca y "Hoy" como lista (`styles.css`, sin tocar JS/HTML
+de esas pantallas):** `.card-list-item` (Biblioteca) y `.step-card` ("Hoy")
+ya eran clases propias, separadas de la `.card` genérica que sigue usando
+Perfil — así que alcanzó con una regla CSS nueva (`.card-list-item,
+.step-card { background:transparent; border:none; border-radius:0;
+box-shadow:none; border-bottom:1px solid var(--border-soft); margin-bottom:0
+}` + `#list, #stepsList { border-top: 1px solid var(--border-soft) }`) para
+convertirlas en filas separadas por líneas finas, sin tocar un solo archivo
+de esas dos pantallas ni sus manejadores de click. `.card` (Perfil, "Nuevo")
+no se tocó: sigue con fondo/borde/radio propios, solo con los colores
+nuevos heredados de las variables de `:root`.
+
+**Por qué (la decisión de alcance):** Biblioteca y "Hoy" son, literalmente,
+listas de ejercicios — el patrón de fila-con-línea-fina es el que mejor
+encaja ahí (y era, además, lo que el usuario señaló que le gustaba del
+lienzo). "Nuevo ejercicio" y Perfil son formularios con bloques de campos,
+steppers y chip-rows: no son una lista de ítems intercambiables, así que
+forzar el mismo patrón ahí no tenía un beneficio claro y sí el riesgo de
+romper una estructura ya probada — se lo planteamos directamente al usuario
+antes de tocar código y confirmó "solo recolorear" para esas pantallas.
+
+**Verificado en el navegador:** con un ejercicio de prueba de tipo "Escala"
+nivel "Principiante", se confirmó en Biblioteca que la fila quedó sin
+tarjeta (fondo transparente, separada por una línea fina) con el disquito
+de pesa antes de "PRINCIPIANTE" y la escalerita antes de "ESCALA", ambos
+legibles al tamaño real del badge. Se confirmó también que Perfil ("Nuevo
+ejercicio"/nivel) conserva su tarjeta con fondo/borde propios, solo con la
+paleta nueva. Sin errores nuevos en consola. El ejercicio de prueba se borró
+de `localStorage` al terminar.
