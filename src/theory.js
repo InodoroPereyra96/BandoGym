@@ -31,9 +31,12 @@ export const TONALIDADES_AVANZADO = [
 // automáticamente los 12 pasos (uno por tonalidad, con abriendo y cerrando
 // apilados en la misma imagen) de "Arpegios menores". Ver DECISIONES.md
 // puntos 15 y 56.
+// Orden cromático ascendente (de La a Lab, cubriendo toda la octava), no de
+// quintas — es el orden real en que el usuario armó su PDF de "Arpegios
+// menores nota repetida" (ver DECISIONES.md punto 56).
 export const TONALIDADES_MENORES_12 = [
-  'La menor', 'Mi menor', 'Si menor', 'Fa# menor', 'Do# menor', 'Sol# menor',
-  'Reb menor', 'Lab menor', 'Mib menor', 'Sib menor', 'Fa menor', 'Do menor',
+  'La menor', 'Sib menor', 'Si menor', 'Do menor', 'Do# menor', 'Re menor',
+  'Mib menor', 'Mi menor', 'Fa menor', 'Fa# menor', 'Sol menor', 'Lab menor',
 ];
 
 export const DIRECCIONES_FUELLE = ['abriendo', 'cerrando'];

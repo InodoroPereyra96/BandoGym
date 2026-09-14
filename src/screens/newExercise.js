@@ -3,8 +3,8 @@
 // Decisión (ver DECISIONES.md punto 14): a diferencia del prototipo anterior
 // (que creaba un ejercicio por tonalidad), este formulario permite cargar
 // MÚLTIPLES imágenes ("pasos") dentro de una sola entrada de ejercicio, cada
-// una con su propia etiqueta (ej. "La menor abriendo") y orden. El
-// reproductor después recorre esos pasos en secuencia.
+// una con su propia etiqueta (ej. "La menor") y orden. El reproductor
+// después recorre esos pasos en secuencia.
 //
 // Decisión (ver DECISIONES.md punto 15, generalizada en el punto 38): si el
 // tipo es "arpegio" y el NOMBRE del ejercicio es exactamente "Arpegios
@@ -300,7 +300,7 @@ export function render(container, { param, navigate }) {
       <div class="card paso-row" data-idx="${i}">
         <div class="paso-row-head">
           <span class="paso-index">${i + 1}</span>
-          <input type="text" class="paso-etiqueta" placeholder="Ej: Am abriendo" value="${escapeHTML(p.etiqueta)}" />
+          <input type="text" class="paso-etiqueta" placeholder="Ej: La menor" value="${escapeHTML(p.etiqueta)}" />
         </div>
         <div class="paso-row-body">
           <label class="file-drop file-drop-sm">

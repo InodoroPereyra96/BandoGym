@@ -2523,3 +2523,74 @@ punta a punta sobre el PDF real del usuario: generó 12 imágenes, las 12 de
 exactamente el mismo tamaño en píxeles (1668×872), revisadas visualmente
 varias (incluida la última página) sin que se cortara ningún número de
 dedo, símbolo de fuelle ni nota grave.
+
+## 57. Orden real de tonalidades del PDF (cromático, no de quintas) + vía para reemplazar las imágenes del ejercicio real
+
+**Pedido:** el usuario pidió que directamente reemplace yo las imágenes del
+ejercicio "Arpegios menores nota repetida" que ya tiene cargado (en vez de
+subirlas él a mano), y aclaró el orden real de tonalidades de su PDF: "Am
+hasta Abm... cada dos sistemas cambia de tonalidad Am, Bbm, Bm etc" —es
+decir, cromático ascendente cubriendo toda la octava, no el orden de
+quintas que traía `TONALIDADES_MENORES_12` desde el punto 15.
+
+**Decisión:**
+1. `TONALIDADES_MENORES_12` (`theory.js`) pasa de orden de quintas (La, Mi,
+   Si, Fa#, Do#, Sol#, Reb, Lab, Mib, Sib, Fa, Do) a orden cromático
+   ascendente (La, Sib, Si, Do, Do#, Re, Mib, Mi, Fa, Fa#, Sol, Lab),
+   confirmado por el usuario. Es el único lugar donde se usa esta
+   constante (`generateArpegioMenorPasos` en `data.js`), así que el cambio
+   no afecta nada más.
+2. Se corrigieron además dos textos que todavía mencionaban "abriendo" en
+   ejemplos de etiqueta de paso (comentario de cabecera y placeholder del
+   input de etiqueta en `newExercise.js`), que habían quedado del modelo
+   viejo de 24 pasos (punto 56).
+3. Como las imágenes viven en `localStorage` del dispositivo y no en el
+   repo (nota del punto 56), la vía acordada para que YO reemplace las del
+   ejercicio real (en vez de que el usuario las suba a mano) fue: el
+   usuario exportó su backup completo desde Perfil y lo mandó por el chat.
+   Se encontró ahí el ejercicio real: **"Arpegios menoress"** (nombre con
+   una "s" de más, articulación "nota-repetida", `id`
+   `custom-mtvy0usg-txotu8`) — ya tenía 12 pasos cargados a mano (Am, Bbm,
+   Bm, Cm, C#m, Dm, Ebm, Em, Fm, F#m, Gm, Abm, el mismo orden cromático del
+   punto 57), cada uno con su imagen vieja (la de margen inconsistente del
+   punto 55) en `fuelle:customImages:v2`, keyeada por `paso.id`. Se escribió
+   un script Python (`patch_backup.py`, fuera del repo) que abre el JSON
+   del backup, reemplaza únicamente esas 12 entradas de imagen (por orden:
+   `paso_01.png`→orden 0, … `paso_12.png`→orden 11) codificándolas en
+   base64 como `data:image/png;base64,...`, y vuelve a escribir el backup
+   completo. Se le devolvió el archivo resultante al usuario para que lo
+   importe desde Perfil.
+
+   Nota: hay un segundo ejercicio de arpegio ("Arpegios menore", sin la
+   "s" final, articulación staccato) con la misma estructura de 12 pasos
+   — no se tocó, no es el que el usuario pidió reemplazar. Además, NINGUNO
+   de los dos tiene `grupoEspecial` seteado porque ninguno se llama
+   exactamente "Arpegios menores" (ambos tienen errores de tipeo en el
+   nombre) — `esArpegioMenorPorNombre()` exige coincidencia exacta (punto
+   15/38), así que hoy no se agrupan en "Hoy". No se corrigió porque no fue
+   lo que se pidió; queda señalado para si el usuario lo quiere arreglar.
+
+**Por qué:** el orden de tonalidades no es un detalle cosmético — si no
+coincide con el de las imágenes reales, cada paso queda etiquetado (y
+ordenado en el selector de pasos del reproductor) con una tonalidad que no
+es la que se ve en pantalla. Se verificó con el usuario antes de tocar el
+código en vez de asumir que el orden de quintas original (heredado del
+punto 15, anterior a tener el PDF real) era el correcto.
+
+**Verificado en el navegador:** con el ejercicio de prueba "Arpegios
+menores" (tipo Arpegio), el botón "Generar" produce las 12 etiquetas en el
+input de cada paso en el orden exacto: La menor, Sib menor, Si menor, Do
+menor, Do# menor, Re menor, Mib menor, Mi menor, Fa menor, Fa# menor, Sol
+menor, Lab menor — coincide 1 a 1 con `paso_01.png`…`paso_12.png` del
+punto 56 (que ya siguen el orden de páginas del PDF), así que esas 12
+imágenes no necesitan reordenarse.
+
+**Verificado el parche del backup real:** se comparó el JSON parcheado
+contra el original — todas las demás keys de `localStorage` (progreso,
+perfil, otros ejercicios, configuración de reproductor) quedaron
+**byte a byte idénticas**; `fuelle:customExercises:v2` (pasos, etiquetas,
+compases, orden) sin cambios; las imágenes del otro ejercicio de arpegio
+("Arpegios menore", staccato) sin cambios. Se decodificaron las 12 imágenes
+nuevas del backup parcheado y se comparó su hash SHA-256 contra el archivo
+fuente correspondiente: **las 12 coinciden exactamente**, confirmando que
+no hubo corrupción en la codificación base64.
