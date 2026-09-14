@@ -296,6 +296,11 @@ export function render(container, { param, navigate }) {
   // ---------- Pasos (imágenes en secuencia, escala/arpegio) ----------
 
   function pasoRowHTML(p, i) {
+    // Ver DECISIONES.md punto 58: un paso puede tener 2 sistemas apilados
+    // en la misma imagen (arriba=⊓/abriendo, abajo=V/cerrando, ver punto
+    // 56) — cada uno con su propia cantidad de compases, para que la barra
+    // de práctica sepa cuándo termina uno y salta al otro.
+    const dosSistemas = Number(p.compasesAbajo) > 0;
     return `
       <div class="card paso-row" data-idx="${i}">
         <div class="paso-row-head">
@@ -310,13 +315,25 @@ export function render(container, { param, navigate }) {
           ${p._imgPreview ? `<img class="file-preview file-preview-sm" src="${p._imgPreview}" alt="Vista previa" />` : ''}
         </div>
         <div class="paso-row-compases">
-          <span class="paso-compases-label">Compases de este paso</span>
+          <span class="paso-compases-label">${dosSistemas ? 'Compases arriba (⊓)' : 'Compases de este paso'}</span>
           <div class="stepper stepper-sm">
-            <button type="button" class="icon-btn" data-comp-down="${i}" aria-label="Bajar compases de este paso">−</button>
+            <button type="button" class="icon-btn" data-comp-down="${i}" aria-label="Bajar compases">−</button>
             <div class="stepper-value" data-comp-value="${i}">${p.compases}</div>
-            <button type="button" class="icon-btn" data-comp-up="${i}" aria-label="Subir compases de este paso">+</button>
+            <button type="button" class="icon-btn" data-comp-up="${i}" aria-label="Subir compases">+</button>
           </div>
         </div>
+        ${dosSistemas ? `
+        <div class="paso-row-compases">
+          <span class="paso-compases-label">Compases abajo (V)</span>
+          <div class="stepper stepper-sm">
+            <button type="button" class="icon-btn" data-comp-abajo-down="${i}" aria-label="Bajar compases de abajo">−</button>
+            <div class="stepper-value" data-comp-abajo-value="${i}">${p.compasesAbajo}</div>
+            <button type="button" class="icon-btn" data-comp-abajo-up="${i}" aria-label="Subir compases de abajo">+</button>
+          </div>
+        </div>` : ''}
+        <button type="button" class="chip chip-sm ${dosSistemas ? 'active' : ''}" data-toggle-dos-sistemas="${i}">
+          ${dosSistemas ? '✕ Es de un solo sistema' : '+ La imagen tiene 2 sistemas (⊓ + V)'}
+        </button>
         <div class="paso-row-actions">
           <button type="button" class="icon-btn" data-up="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Subir paso">↑</button>
           <button type="button" class="icon-btn" data-down="${i}" ${i === pasos.length - 1 ? 'disabled' : ''} aria-label="Bajar paso">↓</button>
@@ -388,6 +405,42 @@ export function render(container, { param, navigate }) {
         pasosList.querySelector(`[data-comp-value="${i}"]`).textContent = pasos[i].compases;
       });
     });
+    // Compases del sistema de ABAJO (V/cerrando), solo visible cuando el
+    // paso tiene 2 sistemas (ver DECISIONES.md punto 58).
+    pasosList.querySelectorAll('[data-comp-abajo-down]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const i = Number(btn.dataset.compAbajoDown);
+        pasos[i].compasesAbajo = Math.max(1, Number(pasos[i].compasesAbajo || 1) - 1);
+        pasosList.querySelector(`[data-comp-abajo-value="${i}"]`).textContent = pasos[i].compasesAbajo;
+      });
+    });
+    pasosList.querySelectorAll('[data-comp-abajo-up]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const i = Number(btn.dataset.compAbajoUp);
+        pasos[i].compasesAbajo = Math.min(16, Number(pasos[i].compasesAbajo || 1) + 1);
+        pasosList.querySelector(`[data-comp-abajo-value="${i}"]`).textContent = pasos[i].compasesAbajo;
+      });
+    });
+    // Al activar "2 sistemas", se sugiere partir el total actual a la
+    // mitad (ver charla con el usuario en DECISIONES.md punto 58) como
+    // punto de partida editable, no como valor definitivo.
+    pasosList.querySelectorAll('[data-toggle-dos-sistemas]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const i = Number(btn.dataset.toggleDosSistemas);
+        const p = pasos[i];
+        if (Number(p.compasesAbajo) > 0) {
+          // Al apagar, se restaura el total (arriba+abajo) en vez de perder
+          // la parte de abajo — evita que el total "encoja" solo.
+          p.compases = Math.max(1, Number(p.compases || 1) + Number(p.compasesAbajo || 0));
+          p.compasesAbajo = null;
+        } else {
+          const mitad = Math.max(1, Math.round(Number(p.compases || 2) / 2));
+          p.compasesAbajo = mitad;
+          p.compases = Math.max(1, Number(p.compases || 2) - mitad);
+        }
+        paintPasos();
+      });
+    });
   }
 
   container.querySelector('#addPasoBtn').addEventListener('click', () => {
@@ -447,6 +500,9 @@ export function render(container, { param, navigate }) {
         etiqueta: p.etiqueta.trim() || `Paso ${i + 1}`,
         orden: i,
         compases: Number(p.compases) > 0 ? Number(p.compases) : 2, // ver DECISIONES.md ronda 6, punto 34
+        // Compases del sistema de abajo (V/cerrando), solo si el paso tiene
+        // 2 sistemas apilados en la imagen — ver DECISIONES.md punto 58.
+        compasesAbajo: Number(p.compasesAbajo) > 0 ? Number(p.compasesAbajo) : null,
         imagenUrl: null,
         audios: Object.fromEntries(BPM_OPTIONS.map((b) => [b, null])),
       }));

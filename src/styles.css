@@ -460,6 +460,16 @@ input, select, textarea {
   color: var(--gold-ink);
 }
 
+/* Ver DECISIONES.md punto 58: toggle chico dentro de una fila de paso
+   (ej. "tiene 2 sistemas"), no necesita el tamaño táctil completo de los
+   chips de nivel de pantalla. */
+.chip-sm {
+  min-height: 34px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  margin-bottom: 8px;
+}
+
 /* ---------- Encabezados de sección ---------- */
 
 .section-title {
@@ -658,8 +668,20 @@ input, select, textarea {
   height: 60vh;
 }
 
-.score-frame img,
-.score-frame svg {
+/* Ver DECISIONES.md punto 58: la imagen ya no recibe el transform de
+   zoom/paneo directo — ahora lo recibe este contenedor (`.score-inner`),
+   que la envuelve junto con la barra de práctica y el atenuado de sistema,
+   para que esos overlays se muevan y escalen siempre junto con la imagen
+   real (ver src/zoom.js, `getTarget` en player.js). */
+.score-inner {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  max-height: 60vh;
+}
+
+.score-inner img,
+.score-inner svg {
   display: block;
   width: auto;
   height: auto;
@@ -669,6 +691,36 @@ input, select, textarea {
   background: #f3ecdf;
   touch-action: none; /* el pellizco/paneo lo maneja src/zoom.js */
 }
+
+/* Barra que corre por el sistema activo en sincronía con el metrónomo/audio
+   demo (solo modo automático, ver DECISIONES.md punto 58). Se posiciona en
+   `left` como % del ancho de `.score-inner` (o sea de la imagen real, sigue
+   su mismo zoom/paneo) y avanza de a un tiempo por vez, con una transición
+   corta entre posiciones en vez de animación continua. */
+.score-cursor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--gold);
+  pointer-events: none;
+  opacity: 0;
+  transition: left 0.18s linear, opacity 0.2s ease;
+}
+.score-cursor.active { opacity: 0.85; }
+
+/* Atenuado del sistema que no está sonando (arriba mientras suena abajo, o
+   viceversa) — el activo queda a opacidad plena. */
+.score-dim {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: rgba(27, 25, 24, 0.55);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.score-dim.active { opacity: 1; }
 
 .score-frame-wrap {
   position: relative;
@@ -713,7 +765,9 @@ input, select, textarea {
 .score-frame-wrap:fullscreen .score-frame img,
 .score-frame-wrap:fullscreen .score-frame svg,
 .score-frame-wrap:-webkit-full-screen .score-frame img,
-.score-frame-wrap:-webkit-full-screen .score-frame svg {
+.score-frame-wrap:-webkit-full-screen .score-frame svg,
+.score-frame-wrap:fullscreen .score-inner,
+.score-frame-wrap:-webkit-full-screen .score-inner {
   max-height: 100vh;
 }
 
@@ -1247,7 +1301,8 @@ body.is-player .app-shell {
   }
 
   body.is-player .player-wrap.escala-arpegio .score-frame img,
-  body.is-player .player-wrap.escala-arpegio .score-frame svg {
+  body.is-player .player-wrap.escala-arpegio .score-frame svg,
+  body.is-player .player-wrap.escala-arpegio .score-inner {
     max-height: 100%;
   }
 

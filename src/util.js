@@ -207,6 +207,89 @@ export function computeContentTransform(imgEl, frameEl) {
   }
 }
 
+// Ver DECISIONES.md punto 58: un paso de "Arpegios menores"/escalas puede
+// traer 2 sistemas apilados en la misma imagen (arriba=⊓/abriendo,
+// abajo=V/cerrando, ver punto 56) — para que la barra de práctica sepa
+// dónde termina uno y empieza el otro, se detecta el hueco horizontal en
+// blanco entre ambos directamente en la imagen (misma idea que el recorte
+// automático hecho fuera de la app para el punto 56/57, pero del lado del
+// cliente y en base a franjas de fila, no líneas de pentagrama exactas —
+// alcanza con encontrar el hueco, no hace falta ubicar cada línea).
+const SYSTEM_SPLIT_SAMPLE_MAX = 500; // resolución del canvas de análisis (lado más largo)
+const SYSTEM_SPLIT_INK_LUMINANCE = 200; // mismo criterio de "tinta" que computeContentTransform
+const SYSTEM_SPLIT_MIN_GAP_FRACTION = 0.025; // hueco interno más angosto que esto no cuenta como separación real
+const SYSTEM_SPLIT_EDGE_MARGIN_FRACTION = 0.12; // ignora huecos pegados al borde (eso es margen, no separación entre sistemas)
+
+/**
+ * Busca, dentro de `imgEl` (ya cargada), el hueco horizontal en blanco más
+ * ancho que separe dos sistemas apilados verticalmente. Devuelve
+ * `{ system1: {topFrac, bottomFrac}, system2: {topFrac, bottomFrac} }` (en
+ * fracción 0..1 de la altura total de la imagen) si encuentra un hueco
+ * interno suficientemente ancho, o `null` si la imagen parece ser de un
+ * solo sistema (no se detectó separación clara) o no se pudo analizar.
+ */
+export function detectSystemSplit(imgEl) {
+  try {
+    const w = imgEl.naturalWidth;
+    const h = imgEl.naturalHeight;
+    if (!w || !h) return null;
+
+    const longSide = Math.max(w, h);
+    const sampleScale = SYSTEM_SPLIT_SAMPLE_MAX / longSide;
+    const sampleW = Math.max(1, Math.round(w * sampleScale));
+    const sampleH = Math.max(1, Math.round(h * sampleScale));
+    const canvas = document.createElement('canvas');
+    canvas.width = sampleW;
+    canvas.height = sampleH;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(imgEl, 0, 0, sampleW, sampleH);
+    const { data } = ctx.getImageData(0, 0, sampleW, sampleH);
+
+    // Densidad de "tinta" por fila (fracción de píxeles no blancos).
+    const rowHasInk = new Array(sampleH).fill(false);
+    for (let y = 0; y < sampleH; y++) {
+      const rowStart = y * sampleW * 4;
+      for (let x = 0; x < sampleW; x++) {
+        const i = rowStart + x * 4;
+        if (data[i + 3] < 10) continue;
+        const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        if (lum < SYSTEM_SPLIT_INK_LUMINANCE) { rowHasInk[y] = true; break; }
+      }
+    }
+
+    // Franjas contiguas de filas totalmente en blanco.
+    const blankRuns = [];
+    let runStart = -1;
+    for (let y = 0; y < sampleH; y++) {
+      if (!rowHasInk[y]) {
+        if (runStart === -1) runStart = y;
+      } else if (runStart !== -1) {
+        blankRuns.push([runStart, y - 1]);
+        runStart = -1;
+      }
+    }
+    if (runStart !== -1) blankRuns.push([runStart, sampleH - 1]);
+
+    // Descartar huecos pegados al borde (margen superior/inferior de la
+    // imagen, no separación entre sistemas) y quedarse con el más ancho.
+    const edgeMargin = sampleH * SYSTEM_SPLIT_EDGE_MARGIN_FRACTION;
+    const internal = blankRuns.filter(([a, b]) => a > edgeMargin && b < sampleH - edgeMargin);
+    if (internal.length === 0) return null;
+
+    internal.sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]));
+    const [gapStart, gapEnd] = internal[0];
+    const gapFraction = (gapEnd - gapStart + 1) / sampleH;
+    if (gapFraction < SYSTEM_SPLIT_MIN_GAP_FRACTION) return null;
+
+    return {
+      system1: { topFrac: 0, bottomFrac: gapStart / sampleH },
+      system2: { topFrac: (gapEnd + 1) / sampleH, bottomFrac: 1 },
+    };
+  } catch (e) {
+    return null; // cualquier falla de canvas: tratar como un solo sistema
+  }
+}
+
 /** Escapa texto para insertarlo de forma segura en HTML (contenido o atributos). */
 export function escapeHTML(str) {
   return String(str)

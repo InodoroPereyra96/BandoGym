@@ -25,8 +25,8 @@
 // bidireccional).
 
 import * as store from '../store.js';
-import { tiemposPorCompas, pasoCompases, isValidBpm } from '../data.js';
-import { scorePlaceholderSVG, formatMMSS, computeContentTransform, escapeHTML } from '../util.js';
+import { tiemposPorCompas, pasoTieneDosSistemas, pasoCompasesArriba, pasoCompasesAbajo, isValidBpm } from '../data.js';
+import { scorePlaceholderSVG, formatMMSS, computeContentTransform, detectSystemSplit, escapeHTML } from '../util.js';
 import { NIVEL_LABEL, ARTICULACION_LABEL, BPM_OPTIONS, BPM_MIN, BPM_MAX, GRUPO_ARPEGIOS_MENORES, NOMBRE_GRUPO_ARPEGIOS_MENORES } from '../theory.js';
 import { toast } from '../ui.js';
 import { createMetronome } from '../metronome.js';
@@ -260,17 +260,38 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   // anticipación sonando, sin avanzar pasos) o 'playing' (avanzando pasos en
   // sincronía con el metrónomo). Ver DECISIONES.md puntos 24 y 27.
   let phase = 'stopped';
-  let beatsElapsedInPaso = 0;
+  // Renombrado de `beatsElapsedInPaso` (ver DECISIONES.md punto 58): ahora
+  // cuenta tiempos dentro del SISTEMA activo, no del paso entero — con un
+  // solo sistema por paso (comportamiento viejo) es exactamente lo mismo.
+  let beatsElapsedInSistema = 0;
   let countInElapsed = 0;
 
-  // Cuántos tiempos dura un paso / la cuenta de anticipación completa, en
-  // tiempos reales del compás del ejercicio (no siempre 4). Ver DECISIONES.md
-  // punto 23. Los compases del paso actual (no un valor global — ver
-  // DECISIONES.md ronda 6, punto 34) se leen en cada llamada, así que cambian
-  // solos al cambiar de paso sin ningún control aparte.
-  function beatsPerPaso() {
-    const compasesDeEstePaso = pasoCompases(pasos[index], exercise);
-    return Math.max(1, compasesDeEstePaso * tiempos);
+  // Ver DECISIONES.md punto 58: un paso puede traer 2 sistemas apilados en
+  // la misma imagen (arriba=⊓/abriendo, abajo=V/cerrando). `systemIndex`
+  // (0=arriba, 1=abajo) dice cuál está sonando ahora mismo dentro del paso
+  // actual — independiente de `index` (que paso) y solo relevante cuando
+  // `pasoTieneDosSistemas(pasos[index])` es true. Se resetea a 0 en cada
+  // cambio de paso (ver paintTonalidad).
+  let systemIndex = 0;
+  // Resultado de `detectSystemSplit()` sobre la imagen del paso actual (o
+  // `null` si es de 1 solo sistema, o no se pudo detectar) — se recalcula
+  // una vez por imagen cargada, no en cada beat.
+  let systemSplit = null;
+
+  // Tiempos del SISTEMA activo dentro del paso actual (arriba o abajo, ver
+  // DECISIONES.md punto 58) — es lo que gobierna cuándo salta la barra de
+  // práctica de un sistema al otro (o de un paso al siguiente, si el paso
+  // es de 1 solo sistema). Reemplaza al viejo `beatsPerPaso()` (que contaba
+  // el paso entero sin distinguir sistemas); los compases del paso actual
+  // (no un valor global — ver DECISIONES.md ronda 6, punto 34) se leen en
+  // cada llamada, así que cambian solos al cambiar de paso/sistema sin
+  // ningún control aparte.
+  function beatsPerSistema() {
+    const paso = pasos[index];
+    const compasesSistema = systemIndex === 0
+      ? pasoCompasesArriba(paso, exercise)
+      : pasoCompasesAbajo(paso);
+    return Math.max(1, compasesSistema * tiempos);
   }
   function countInBeatsTotal() {
     return 2 * tiempos; // 2 compases completos de anticipación, ver DECISIONES.md punto 27
@@ -420,7 +441,7 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   // retrocede según la mitad tocada (ver DECISIONES.md ronda 6, punto 36) —
   // mitad derecha avanza, mitad izquierda retrocede. El doble-tap para zoom
   // sigue funcionando sin conflicto (ver zoom.js).
-  const zoomCtl = attachPinchZoom(scoreFrame, () => scoreFrame.querySelector('img, svg'), {
+  const zoomCtl = attachPinchZoom(scoreFrame, () => scoreFrame.querySelector('.score-inner'), {
     onSingleTap: ({ x } = {}) => {
       if (mode !== 'manual') return;
       const rect = scoreFrame.getBoundingClientRect();
@@ -491,7 +512,7 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
    * Los indicadores de paso son cuadraditos TOCABLES (ver DECISIONES.md
    * ronda 6, punto 35): tocar uno salta directo a ese paso (`goTo(i)`, no
    * hace falta ir de a uno con ⏮/⏭) y resincroniza el conteo de tiempos del
-   * paso — `goTo` ya reseteaba `beatsElapsedInPaso` a 0 en cada cambio de
+   * paso — `goTo` ya reseteaba `beatsElapsedInSistema` a 0 en cada cambio de
    * paso (ver `paintTonalidad`), así que reusar la misma función alcanza:
    * es estructuralmente imposible que el conteo "seguido de largo" desde el
    * paso viejo, el salto siempre arranca al tiempo 0 del paso destino.
@@ -563,9 +584,21 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
     const p = pasos[index];
     const myGeneration = ++paintGeneration;
     tonalidadNombre.textContent = p.etiqueta;
+    // Nuevo paso: se vuelve a arrancar por el sistema de arriba y se
+    // descarta la detección de límite entre sistemas de la imagen anterior
+    // (ver DECISIONES.md punto 58) — se recalcula sola más abajo si
+    // corresponde.
+    systemIndex = 0;
+    systemSplit = null;
     const customImg = store.getImageFor(p.id) || p.imagenUrl;
     if (customImg) {
-      scoreFrame.innerHTML = `<img src="${customImg}" alt="Partitura: ${p.etiqueta}" />`;
+      scoreFrame.innerHTML = `
+        <div class="score-inner">
+          <img src="${customImg}" alt="Partitura: ${p.etiqueta}" />
+          <div class="score-dim score-dim-top"></div>
+          <div class="score-dim score-dim-bottom"></div>
+          <div class="score-cursor"></div>
+        </div>`;
       const imgEl = scoreFrame.querySelector('img');
       zoomCtl.reset(); // valor neutro mientras se analiza esta imagen puntual
       // Normalización + maximización automática de tamaño visual entre
@@ -575,37 +608,46 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
       const applyNormalization = () => {
         if (myGeneration !== paintGeneration) return; // el usuario ya avanzó a otro paso: no pisarlo
         applyAutoTransform();
+        // Ver DECISIONES.md punto 58: se detecta el límite entre sistemas
+        // (si el paso tiene 2) una sola vez por imagen cargada, no en cada
+        // beat — reusa el mismo criterio (hueco horizontal en blanco) que
+        // el recorte automático hecho fuera de la app (puntos 56/57).
+        systemSplit = pasoTieneDosSistemas(p) ? detectSystemSplit(imgEl) : null;
+        updateSystemVisuals();
       };
       if (imgEl.complete && imgEl.naturalWidth) applyNormalization();
       else imgEl.addEventListener('load', applyNormalization, { once: true });
     } else {
       // Los placeholders SVG ya se generan con proporciones consistentes
       // entre sí, así que no necesitan normalización (ver DECISIONES.md
-      // punto 31).
-      scoreFrame.innerHTML = scorePlaceholderSVG({
+      // punto 31). Igual van envueltos en `.score-inner` (ver punto 58):
+      // el zoom táctil siempre transforma ese contenedor, no la imagen/SVG
+      // directo.
+      scoreFrame.innerHTML = `<div class="score-inner">${scorePlaceholderSVG({
         tonalidad: p.etiqueta,
         articulacion: ARTICULACION_LABEL[exercise.articulacion] || exercise.articulacion,
         tipo: exercise.tipo,
         nivel: exercise.nivel,
-      });
+      })}</div>`;
       zoomCtl.reset();
     }
     paintDots();
     paintAudioRow();
-    beatsElapsedInPaso = 0;
+    beatsElapsedInSistema = 0;
     renderSegments();
   }
 
   /**
    * Dibuja la barra de progreso como segmentos discretos — uno por cada
-   * tiempo del paso actual (o de la cuenta de anticipación, mientras esa
-   * fase está activa) — y los va completando exactamente cuando el
+   * tiempo del SISTEMA activo (o de la cuenta de anticipación, mientras esa
+   * fase está activa; con 1 solo sistema por paso, del paso entero — ver
+   * DECISIONES.md punto 58) — y los va completando exactamente cuando el
    * metrónomo dispara cada beat. Ver DECISIONES.md punto 24.
    */
   function renderSegments() {
     const inCountIn = phase === 'countin';
-    const total = inCountIn ? countInBeatsTotal() : beatsPerPaso();
-    const filled = inCountIn ? countInElapsed : beatsElapsedInPaso;
+    const total = inCountIn ? countInBeatsTotal() : beatsPerSistema();
+    const filled = inCountIn ? countInElapsed : beatsElapsedInSistema;
     progressLabel.textContent = inCountIn ? `Cuenta de entrada · ${countInElapsed}/${total}` : '';
     progressLabel.classList.toggle('countin', inCountIn);
     progressSegments.innerHTML = Array.from({ length: total }, (_, i) => (
@@ -656,15 +698,74 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
       if (countInElapsed >= countInBeatsTotal()) {
         phase = 'playing';
         renderSegments();
+        updateSystemVisuals(); // recién ahora corresponde mostrar barra/atenuado (ver punto 58)
       }
       return;
     }
     if (phase !== 'playing') return;
-    beatsElapsedInPaso++;
+    beatsElapsedInSistema++;
     renderSegments();
-    if (beatsElapsedInPaso >= beatsPerPaso()) {
-      goTo(index + 1);
+    updateCursorPosition();
+    if (beatsElapsedInSistema >= beatsPerSistema()) {
+      // Ver DECISIONES.md punto 58: si el paso tiene 2 sistemas y todavía
+      // está sonando el de arriba, se salta al de abajo SIN cambiar de
+      // paso (mismo `index`, misma imagen) — recién cuando termina el de
+      // abajo (o el paso es de 1 solo sistema) se avanza al próximo paso.
+      if (systemIndex === 0 && pasoTieneDosSistemas(pasos[index])) {
+        systemIndex = 1;
+        beatsElapsedInSistema = 0;
+        renderSegments();
+        updateSystemVisuals();
+      } else {
+        goTo(index + 1);
+      }
     }
+  }
+
+  /**
+   * Ver DECISIONES.md punto 58: posiciona el atenuado del sistema inactivo
+   * y la barra de práctica sobre el sistema activo, según lo que haya
+   * encontrado `detectSystemSplit()` para la imagen actual. Sin detección
+   * (paso de 1 solo sistema, o no se pudo analizar la imagen) u fuera de
+   * modo automático/reproduciendo, no se muestra nada — la función es
+   * segura de llamar en cualquier momento, no solo desde `handleBeat`.
+   */
+  function updateSystemVisuals() {
+    const dimTop = scoreFrame.querySelector('.score-dim-top');
+    const dimBottom = scoreFrame.querySelector('.score-dim-bottom');
+    const cursor = scoreFrame.querySelector('.score-cursor');
+    if (!dimTop || !dimBottom || !cursor) return;
+    const activo = phase === 'playing' && mode === 'auto' && systemSplit;
+    if (!activo) {
+      dimTop.classList.remove('active');
+      dimBottom.classList.remove('active');
+      cursor.classList.remove('active');
+      return;
+    }
+    const { system1, system2 } = systemSplit;
+    dimTop.style.top = `${system1.topFrac * 100}%`;
+    dimTop.style.height = `${(system1.bottomFrac - system1.topFrac) * 100}%`;
+    dimBottom.style.top = `${system2.topFrac * 100}%`;
+    dimBottom.style.height = `${(system2.bottomFrac - system2.topFrac) * 100}%`;
+    dimTop.classList.toggle('active', systemIndex === 1); // atenuado arriba mientras suena abajo
+    dimBottom.classList.toggle('active', systemIndex === 0); // atenuado abajo mientras suena arriba
+    const activeSystem = systemIndex === 0 ? system1 : system2;
+    cursor.style.top = `${activeSystem.topFrac * 100}%`;
+    cursor.style.height = `${(activeSystem.bottomFrac - activeSystem.topFrac) * 100}%`;
+    cursor.classList.add('active');
+    updateCursorPosition();
+  }
+
+  /** Mueve la barra de práctica a la posición horizontal correspondiente a
+   * `beatsElapsedInSistema` dentro del sistema activo — velocidad pareja
+   * (un salto igual por cada tiempo, ver charla con el usuario en
+   * DECISIONES.md punto 58, no detección de compás por compás). */
+  function updateCursorPosition() {
+    const cursor = scoreFrame.querySelector('.score-cursor');
+    if (!cursor || !cursor.classList.contains('active')) return;
+    const total = beatsPerSistema();
+    const frac = total > 0 ? Math.min(1, beatsElapsedInSistema / total) : 0;
+    cursor.style.left = `${frac * 100}%`;
   }
 
   function stopAll() {
@@ -673,6 +774,7 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
     playBtn.innerHTML = ICON_PLAY;
     metronome.stop();
     renderSegments();
+    updateSystemVisuals(); // apaga barra/atenuado (ver DECISIONES.md punto 58)
   }
 
   function togglePlay() {

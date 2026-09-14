@@ -2594,3 +2594,114 @@ compases, orden) sin cambios; las imágenes del otro ejercicio de arpegio
 nuevas del backup parcheado y se comparó su hash SHA-256 contra el archivo
 fuente correspondiente: **las 12 coinciden exactamente**, confirmando que
 no hubo corrupción en la codificación base64.
+
+## 58. Barra de práctica sincronizada con el metrónomo, corriendo sistema por sistema dentro de un mismo paso (1ra etapa)
+
+**Pedido:** el usuario preguntó si, ahora que las imágenes tienen un molde
+consistente (puntos 56/57), sería más fácil hacer un slide de la partitura
+mientras corre el metrónomo. Pidió: (a) que el slide sea solo en modo
+automático; (b) una barra vertical corriendo por el pentagrama en sincronía
+con el metrónomo; (c) que se vincule también con los audios de demostración;
+(d) que, como cada paso trae 2 sistemas apilados en una sola imagen (⊓
+arriba/V abajo, ver punto 56), la barra esté en un solo sistema a la vez y
+después pase al de abajo. Pidió explícitamente que se le preguntara todo lo
+necesario antes de arrancar.
+
+**Decisiones de diseño, todas confirmadas con el usuario antes de tocar
+código:**
+1. **Precisión de la barra:** se probó primero detectar automáticamente las
+   barras de compás reales (misma técnica que la detección de pentagramas
+   de los puntos 56/57) para que el cursor cayera exacto en cada división.
+   La prueba sobre las imágenes reales del usuario **no dio resultados
+   confiables** (contaba 4-6 compases donde el dato real cargado decía
+   6-8, y arriba/abajo daban distinto cuando deberían coincidir) — las
+   plicas y corcheas juntas de las semicorcheas forman columnas oscuras
+   tan altas como una barra de compás real y confunden al detector. Se le
+   mostró la comparación completa al usuario y, en vez de invertir más
+   tiempo afinando un detector de confiabilidad incierta, se optó por
+   **velocidad constante dentro de cada sistema** (un salto igual de la
+   barra por cada tiempo del metrónomo, no por compás real).
+2. **Vista mientras suena un sistema:** se muestran los 2 sistemas
+   siempre visibles (no se recorta/hace zoom al activo) — el que no está
+   sonando se atenúa (oscurece) y la barra corre solo sobre el activo.
+3. **Compases por sistema:** hoy un paso combinado (⊓+V) tiene UN solo
+   número de compases para las dos mitades juntas (heredado de cuando eran
+   pasos separados). Como a veces arriba y abajo duran distinto (ej. un
+   caso real con 7 compases totales, no partible a la mitad), se agregó un
+   campo nuevo editable en vez de asumir siempre mitad y mitad — ver
+   modelo de datos más abajo.
+4. **Audio demo:** la barra usa el BPM del audio de referencia elegido
+   (40/60/80) para su velocidad, con el mismo cálculo que ya usa el
+   metrónomo — no lee el archivo de audio en sí (`currentTime`). *(Nota:
+   esta 1ra etapa deja el enganche real con la reproducción del audio demo
+   para una siguiente etapa — ver "Pendiente" más abajo.)*
+
+**Modelo de datos (`data.js`):** nuevo campo opcional `paso.compasesAbajo`.
+Si no está presente (`null`/`0`, el caso de TODOS los pasos viejos de 1
+solo sistema), el paso se comporta exactamente igual que hoy — cero
+impacto en datos existentes. Si está presente, `paso.compases` pasa a
+significar "compases del sistema de ARRIBA" y el total (usado por
+`pasoCompases()`, ya consumido por el cálculo de duración y por el
+metrónomo) es la suma de los dos. Nuevos helpers: `pasoTieneDosSistemas()`,
+`pasoCompasesArriba()`, `pasoCompasesAbajo()`.
+
+**Formulario (`newExercise.js`):** cada fila de paso tiene un botón "+ La
+imagen tiene 2 sistemas (⊓ + V)" que, al activarlo, parte el total actual a
+la mitad como sugerencia editable (no definitiva) y muestra un segundo
+stepper "Compases abajo (V)"; el primero pasa a etiquetarse "Compases
+arriba (⊓)". Al apagar el toggle se restaura el total (arriba+abajo) en vez
+de perderlo — se encontró y corrigió un bug real de esto durante las
+pruebas (el total "encogía" al apagar, quedándose solo con la mitad de
+arriba).
+
+**Detección del límite entre sistemas (`util.js`, `detectSystemSplit()`):**
+en vez de pedirle al usuario que marque dónde empieza cada sistema dentro
+de la imagen, se detecta solo, del lado del cliente, con la misma idea que
+la detección de pentagramas hecha fuera de la app para el recorte
+automático (puntos 56/57) pero adaptada a canvas: se dibuja la imagen a un
+canvas de análisis, se mide qué filas tienen "tinta" (no blancas) y se
+busca el hueco horizontal en blanco más ancho que no esté pegado a los
+bordes (eso sería margen, no separación). A diferencia de la detección de
+barras de compás (que falló), esto SÍ es confiable: alcanza con encontrar
+UN hueco grande, no muchas líneas finas en medio de notas y plicas densas.
+
+**Reproductor (`player.js`):** la imagen de cada paso ahora se envuelve en
+un contenedor nuevo (`.score-inner`) junto con 2 rectángulos de atenuado
+(`.score-dim-top/bottom`) y la barra (`.score-cursor`) — el zoom
+táctil/pellizco (`zoom.js`) ahora transforma ese contenedor en vez de la
+imagen directo, así los overlays se mueven y escalan siempre junto con la
+imagen real sin tocar `zoom.js` (`getTarget` genérico, ya recibía un
+callback). Nuevo estado `systemIndex` (0=arriba, 1=abajo) además del
+`index` de paso existente: `beatsElapsedInPaso`/`beatsPerPaso()` se
+renombraron a `beatsElapsedInSistema`/`beatsPerSistema()` (leen
+`compasesArriba`/`compasesAbajo` según `systemIndex`). En `handleBeat`: si
+se completan los tiempos del sistema de arriba y el paso tiene 2 sistemas,
+se salta al de abajo SIN cambiar de paso (mismo `index`, misma imagen,
+`goTo` no se llama); recién al completar el de abajo (o en un paso de 1
+solo sistema) se avanza al paso siguiente como ya hacía antes.
+
+**Pendiente (fuera del alcance de esta 1ra etapa, señalado pero no hecho):**
+- El slide/deslizamiento VISUAL entre la imagen de un paso y la del
+  siguiente (lo que se pidió originalmente en la charla sobre esta idea,
+  antes del punto 55) — hoy el cambio de paso sigue siendo instantáneo,
+  como siempre. Esta etapa solo resuelve el salto de sistema DENTRO de un
+  mismo paso/imagen.
+- El enganche real de la barra con la reproducción del audio demo
+  (`currentTime` del elemento `<audio>`) — por ahora la barra, si sonara
+  un audio demo, tendría que calcularse por BPM como con el metrónomo, pero
+  ese enganche todavía no está conectado al reproductor de audio demo en
+  sí (`audioRow`/`data-play`).
+
+**Verificado en el navegador:** ejercicio de prueba con 2 pasos, cada uno
+con 2 sistemas de distinta duración (3+2 y 2+2 compases, compás 4/4). Se
+inyectaron 2 imágenes reales (del punto 56) directo en `localStorage` y se
+reprodujo en modo automático, inspeccionando el DOM en cada punto:
+- Mientras sonaba el sistema de abajo del paso 1 (5 de 8 tiempos): barra en
+  `left: 62.5%` (5/8 exacto), atenuado activo arriba, inactivo abajo,
+  posición vertical de la barra coincidiendo con el rango del sistema de
+  abajo detectado.
+- Al completarse los 2 sistemas del paso 2, el reproductor avanzó
+  correctamente a la pantalla de calificación ("¿Cómo te salió?"), igual
+  que sin este cambio.
+- Sin errores de consola nuevos. Ejercicio e imágenes de prueba borrados de
+  `localStorage` al terminar.

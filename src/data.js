@@ -54,13 +54,41 @@ export const computeSecondsPerTonalidad = computeSecondsPerPaso;
  * `compases` (dato cargado antes de este cambio), cae al `compasesPorPaso`
  * del ejercicio (el viejo control global) y, si tampoco existe, a 2 — el
  * mismo valor por defecto que ya se usaba.
+ *
+ * Ver DECISIONES.md punto 58: desde que un paso puede tener DOS sistemas
+ * apilados en la misma imagen (arriba=⊓/abriendo, abajo=V/cerrando, ver
+ * punto 56), `paso.compases` pasa a significar "compases del sistema de
+ * arriba" cuando el paso tiene `compasesAbajo` cargado, y el total (usado
+ * acá para el metrónomo/duración) es la suma de los dos. Si no tiene
+ * `compasesAbajo`, es un paso de un solo sistema y `compases` sigue
+ * significando el total, como siempre.
  */
 export function pasoCompases(paso, exercise) {
   const propio = paso && Number(paso.compases);
-  if (propio && Number.isFinite(propio) && propio > 0) return propio;
+  if (propio && Number.isFinite(propio) && propio > 0) {
+    const abajo = pasoCompasesAbajo(paso);
+    return abajo > 0 ? propio + abajo : propio;
+  }
   const delEjercicio = exercise && Number(exercise.compasesPorPaso);
   if (delEjercicio && Number.isFinite(delEjercicio) && delEjercicio > 0) return delEjercicio;
   return 2;
+}
+
+/** true si el paso tiene 2 sistemas apilados en la imagen (arriba+abajo). */
+export function pasoTieneDosSistemas(paso) {
+  return pasoCompasesAbajo(paso) > 0;
+}
+
+/** Compases del sistema de ABAJO (V/cerrando); 0 si el paso es de 1 solo sistema. */
+export function pasoCompasesAbajo(paso) {
+  const abajo = paso && Number(paso.compasesAbajo);
+  return abajo && Number.isFinite(abajo) && abajo > 0 ? abajo : 0;
+}
+
+/** Compases del sistema de ARRIBA (⊓/abriendo, o el único sistema si no hay abajo). */
+export function pasoCompasesArriba(paso, exercise) {
+  if (pasoTieneDosSistemas(paso)) return Math.max(1, Number(paso.compases) || 1);
+  return pasoCompases(paso, exercise);
 }
 
 /** Duración estimada de un ejercicio en minutos, para armar la rutina diaria. */
