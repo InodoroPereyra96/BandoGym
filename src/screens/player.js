@@ -35,6 +35,14 @@ import { attachPinchZoom } from '../zoom.js';
 let cleanupFn = null;
 const metronome = createMetronome();
 
+// Íconos de transporte (ver DECISIONES.md punto 46): reemplazan los
+// glyphs de emoji (▶ ⏸ ⏮ ⏭) por SVG propio, mismo trazo redondeado que el
+// resto de los íconos nuevos de la app (ver punto 45).
+const ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round"><path d="M7 4.8v14.4c0 .9 1 1.4 1.7.9l11-7.2c.6-.4.6-1.3 0-1.7l-11-7.2C8 3.4 7 3.9 7 4.8z"/></svg>';
+const ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4.5" height="16" rx="1.4"/><rect x="13.5" y="4" width="4.5" height="16" rx="1.4"/></svg>';
+const ICON_PREV = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="2.6" height="14" rx="1"/><path d="M18 6.2v11.6c0 .9-1 1.4-1.7.9l-8-5.8c-.6-.4-.6-1.3 0-1.8l8-5.8c.7-.5 1.7 0 1.7.9z"/></svg>';
+const ICON_NEXT = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="16.4" y="5" width="2.6" height="14" rx="1"/><path d="M6 6.2v11.6c0 .9 1 1.4 1.7.9l8-5.8c.6-.4.6-1.3 0-1.8l-8-5.8c-.7-.5-1.7 0-1.7.9z"/></svg>';
+
 function settingsKey(id) {
   return `fuelle:playerSettings:v2:${id}`;
 }
@@ -145,7 +153,7 @@ function renderFuelle(container, exercise, fromRoute, navigate) {
       </div>
 
       <div class="transport">
-        <button class="icon-btn icon-btn-lg" id="playBtn" aria-label="Reproducir / pausar">▶</button>
+        <button class="icon-btn icon-btn-lg" id="playBtn" aria-label="Reproducir / pausar">${ICON_PLAY}</button>
       </div>
 
       <button class="btn btn-wine" id="finishBtn">Terminar y calificar</button>
@@ -168,11 +176,11 @@ function renderFuelle(container, exercise, fromRoute, navigate) {
     playing = !playing;
     if (playing) {
       startedAt = Date.now();
-      playBtn.textContent = '⏸';
+      playBtn.innerHTML = ICON_PAUSE;
       intervalId = setInterval(tick, 200);
     } else {
       elapsedBefore = currentElapsed();
-      playBtn.textContent = '▶';
+      playBtn.innerHTML = ICON_PLAY;
       clearInterval(intervalId);
     }
   }
@@ -287,9 +295,9 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
         <div class="progress-dots" id="dots"></div>
 
         <div class="transport">
-          <button class="icon-btn" id="prevBtn" aria-label="Paso anterior">⏮</button>
-          <button class="icon-btn icon-btn-lg" id="playBtn" aria-label="Reproducir / pausar">▶</button>
-          <button class="icon-btn" id="nextBtn" aria-label="Paso siguiente">⏭</button>
+          <button class="icon-btn" id="prevBtn" aria-label="Paso anterior">${ICON_PREV}</button>
+          <button class="icon-btn icon-btn-lg" id="playBtn" aria-label="Reproducir / pausar">${ICON_PLAY}</button>
+          <button class="icon-btn" id="nextBtn" aria-label="Paso siguiente">${ICON_NEXT}</button>
         </div>
 
         <div id="autoConfigBlock">
@@ -614,7 +622,7 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   function stopAll() {
     playing = false;
     phase = 'stopped';
-    playBtn.textContent = '▶';
+    playBtn.innerHTML = ICON_PLAY;
     metronome.stop();
     renderSegments();
   }
@@ -626,7 +634,7 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
       return;
     }
     playing = true;
-    playBtn.textContent = '⏸';
+    playBtn.innerHTML = ICON_PAUSE;
     // Cada vez que se arranca (incluso al reanudar de una pausa) hay cuenta
     // de anticipación: ver DECISIONES.md punto 27.
     phase = 'countin';

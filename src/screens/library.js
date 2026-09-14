@@ -1,8 +1,8 @@
 // Biblioteca de ejercicios: listado filtrable por nivel y tipo.
 
 import * as store from '../store.js';
-import { NIVELES, NIVEL_LABEL, TIPOS, TIPO_LABEL, GRUPO_ARPEGIOS_MENORES, NOMBRE_GRUPO_ARPEGIOS_MENORES } from '../theory.js';
-import { articulacionBadge, nivelBadge, tipoBadge, fmtMin } from '../ui.js';
+import { NIVELES, NIVEL_LABEL, TIPOS, TIPO_LABEL, ARTICULACION_LABEL, GRUPO_ARPEGIOS_MENORES, NOMBRE_GRUPO_ARPEGIOS_MENORES } from '../theory.js';
+import { nivelBadge, tipoIcon, fmtMin } from '../ui.js';
 import { computeGroupDurationMin } from '../data.js';
 
 let filters = { nivel: 'todos', tipo: 'todos' };
@@ -46,17 +46,22 @@ export function render(container, { navigate }) {
         const dur = fmtMin(computeGroupDurationMin(ex));
         const nPasos = ex.pasos ? `${ex.pasos.length} paso${ex.pasos.length === 1 ? '' : 's'}` : '';
         const esArpegioMenor = ex.grupoEspecial === GRUPO_ARPEGIOS_MENORES;
+        // Tipo + articulación en un solo renglón (ej. "Arpegio / Staccato")
+        // en vez de dos badges separados — ver DECISIONES.md punto 46.
+        const artLabel = ex.tipo !== 'fuelle' && ex.articulacion ? (ARTICULACION_LABEL[ex.articulacion] || ex.articulacion) : null;
+        let tipoLine = artLabel ? `${TIPO_LABEL[ex.tipo]} / ${artLabel}` : TIPO_LABEL[ex.tipo];
+        if (esArpegioMenor) tipoLine += ` · ${NOMBRE_GRUPO_ARPEGIOS_MENORES}`;
         return `
         <div class="card card-tappable card-list-item">
           <button type="button" class="icon-btn card-edit-btn" data-edit="${ex.id}" aria-label="Editar ejercicio">✎</button>
           <div class="card-open-area" data-open="${ex.id}">
-            <div class="card-title">${ex.nombre}</div>
-            <div class="card-meta">
+            <div class="card-title-row">
+              <div class="card-title">${ex.nombre}</div>
               ${nivelBadge(ex.nivel)}
-              ${tipoBadge(ex.tipo)}
-              ${articulacionBadge(ex.tipo === 'fuelle' ? null : ex.articulacion)}
-              ${esArpegioMenor ? `<span class="badge badge-tipo">${NOMBRE_GRUPO_ARPEGIOS_MENORES}</span>` : ''}
-              <span>${dur}</span>
+            </div>
+            <div class="card-meta">
+              <span class="meta-tipo">${tipoIcon(ex.tipo)}${tipoLine}</span>
+              <span>· ${dur}</span>
               ${nPasos ? `<span>· ${nPasos}</span>` : ''}
             </div>
           </div>

@@ -367,6 +367,22 @@ input, select, textarea {
   color: var(--text);
 }
 
+/* ---------- Título + nivel en el mismo renglón (ver DECISIONES.md punto 46) ----------
+   Solo en la tarjeta de Biblioteca: el nivel pasa de estar en `.card-meta`
+   (junto a tipo/articulación) a ir al lado del nombre, dejando esa segunda
+   línea solo para "Tipo / Articulación". */
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.card-title-row .card-title { margin: 0; min-width: 0; }
+.card-title-row .badge { flex-shrink: 0; }
+
+.meta-tipo { display: inline-flex; align-items: center; gap: 4px; }
+
 .card-meta {
   font-size: 0.85rem;
   color: var(--text-dim);

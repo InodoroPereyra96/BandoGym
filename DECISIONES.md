@@ -1926,3 +1926,67 @@ legibles al tamaño real del badge. Se confirmó también que Perfil ("Nuevo
 ejercicio"/nivel) conserva su tarjeta con fondo/borde propios, solo con la
 paleta nueva. Sin errores nuevos en consola. El ejercicio de prueba se borró
 de `localStorage` al terminar.
+
+## 46. Íconos de transporte propios (play/pausa/anterior/siguiente) y nivel junto al título en Biblioteca
+
+**Pedido:** dos cambios sueltos, seguimiento del punto 45. (1) Los botones
+de reproducir/pausar/paso anterior/paso siguiente en Práctica usaban
+glyphs de emoji (▶ ⏸ ⏮ ⏭) — pedido explícito de reemplazarlos por algo con
+más personalidad, en línea con el resto de los íconos nuevos. (2) En la
+tarjeta de Biblioteca, el nivel ("Avanzado") pase a estar al lado del
+nombre del ejercicio, para que el renglón de abajo quede libre y muestre
+tipo + articulación juntos en un solo renglón (ej. "Arpegio / Staccato") en
+vez de dos badges separados.
+
+**Decisión — íconos de transporte (`player.js`):** 4 constantes nuevas al
+principio del archivo (`ICON_PLAY`/`ICON_PAUSE`/`ICON_PREV`/`ICON_NEXT`),
+SVG rellenos (no de trazo como los íconos de tipo del punto 45 — un botón
+de play necesita peso visual para reconocerse de un vistazo, forma
+estándar tipo Material "play"/"pause"/"skip") con un trazo fino adicional
+(`stroke-linejoin="round"`) para que no se sientan un ícono de librería
+genérico. Reemplazan el contenido de los botones en LOS DOS reproductores
+que tiene la app (el simple de "Fuelle", con un solo botón de play/pausa, y
+el de escala/arpegio, con anterior/play/siguiente) — son casos separados en
+el código (ver comentario del punto 14) así que hubo que tocar ambos. Cada
+lugar que antes hacía `playBtn.textContent = '▶'/'⏸'` pasa a
+`playBtn.innerHTML = ICON_PLAY/ICON_PAUSE` (un `<svg>` no se puede asignar
+con `textContent`). El botón "▶ 40/60/80" para reproducir un audio de
+referencia (ver punto 20) NO se tocó — no fue parte del pedido (que hablaba
+puntualmente de "play, retroceder y avanzar", el transporte principal) y es
+un control chico/secundario distinto.
+
+**Decisión — nivel junto al título (`library.js` + `styles.css`, solo
+Biblioteca):**
+- Nueva fila `.card-title-row` (flex, `justify-content: space-between`)
+  envolviendo `.card-title` + `nivelBadge(ex.nivel)` — el nivel se sacó de
+  `.card-meta` y se movió acá.
+- `.card-meta` ahora arma un solo renglón de texto plano para tipo +
+  articulación (`"${TIPO_LABEL[tipo]} / ${ARTICULACION_LABEL[articulacion]}"`,
+  con el ícono de tipo del punto 45 adelante, envuelto en `<span
+  class="meta-tipo">` para que el ícono y el texto queden alineados) en vez
+  de dos `<span class="badge">` separados — los ejercicios de tipo "Fuelle"
+  (sin articulación) muestran solo el tipo. Si el ejercicio pertenece al
+  grupo especial "Arpegios menores" (ver puntos 15/38), el nombre del grupo
+  se agrega al final de ese mismo renglón (`· Arpegios menores`) en vez de
+  un tercer badge aparte. La duración y la cantidad de pasos, que ya
+  estaban, quedan con un separador "·" delante para no leerse pegadas al
+  texto de tipo/articulación (antes ese espacio lo daba el borde de la
+  badge-pill que ahora no está).
+- "Hoy" (`today.js`) no se tocó: ahí no tiene sentido repetir el nivel por
+  fila (todos los ejercicios del día ya son del nivel del perfil activo).
+
+**Por qué:** juntar tipo+articulación en un renglón de texto plano (en vez
+de dos badges) es lo que de verdad libera espacio horizontal para que el
+nivel quepa junto al título sin que la tarjeta necesite una tercera línea —
+mover el nivel solo, sin tocar lo demás, no alcanzaba por espacio. Reusar
+`tipoIcon()` (ya separado de `tipoBadge()` en el punto 45 para poder
+exportarlo suelto) evita duplicar la definición de los 3 SVG de tipo.
+
+**Verificado en el navegador:** con un ejercicio de prueba nivel "Avanzado",
+tipo "Arpegio", articulación "Staccato", se confirmó en Biblioteca el
+renglón `Prueba layout tipo` con la insignia "⊖ AVANZADO" a la derecha del
+nombre, y el renglón de abajo mostrando "⁘ Arpegio / Staccato · 1 min · 1
+paso" tal como se pidió. En Práctica se confirmó que los 3 íconos de
+transporte nuevos se ven (no glyphs de texto) y que tocar play cambia
+correctamente al ícono de pausa y arranca la cuenta de entrada. El
+ejercicio de prueba se borró de `localStorage` al terminar.

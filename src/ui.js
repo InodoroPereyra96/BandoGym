@@ -38,8 +38,14 @@ export function nivelBadge(nivel) {
   return `<span class="badge badge-${nivel}">${NIVEL_PLATE_ICON}${NIVEL_LABEL[nivel] || nivel}</span>`;
 }
 
+/** El ícono de tipo solo, sin envoltorio de badge — para meterlo en una
+ * línea de texto plana (ver DECISIONES.md punto 46, tarjetas de Biblioteca). */
+export function tipoIcon(tipo) {
+  return TIPO_ICON[tipo] || '';
+}
+
 export function tipoBadge(tipo) {
-  return `<span class="badge badge-tipo">${TIPO_ICON[tipo] || ''}${TIPO_LABEL[tipo] || tipo}</span>`;
+  return `<span class="badge badge-tipo">${tipoIcon(tipo)}${TIPO_LABEL[tipo] || tipo}</span>`;
 }
 
 export function articulacionBadge(articulacion) {
