@@ -709,19 +709,6 @@ input, select, textarea {
 }
 .score-cursor.active { opacity: 0.85; }
 
-/* Atenuado del sistema que no está sonando (arriba mientras suena abajo, o
-   viceversa) — el activo queda a opacidad plena. */
-.score-dim {
-  position: absolute;
-  left: 0;
-  right: 0;
-  background: rgba(27, 25, 24, 0.55);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.25s ease;
-}
-.score-dim.active { opacity: 1; }
-
 .score-frame-wrap {
   position: relative;
   margin-bottom: 14px;

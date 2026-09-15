@@ -3033,3 +3033,59 @@ del compás 2, la barra salta a 43.2574%, coincidiendo con el valor
 `0.43257364910990925` calculado — no una aproximación). Sin errores de
 consola. Ejercicio e imagen de prueba borrados de `localStorage` al
 terminar.
+
+## 65. Tres ajustes tras la primera prueba real de la barra por XML: desfase de un tiempo, silencios ignorados, y sacar el atenuado
+
+**Reporte del usuario:** probó el punto 64 en su ejercicio real ("Arpegios
+menores", ya sin el error de tipeo del nombre — grupo especial
+funcionando) y mandó una captura: "cuando el metrónomo arranca dentro del
+ejercicio, no la cuenta preparatoria, arranca en el segundo beat" (la
+barra ya estaba en el tiempo 2 mientras el indicador de progreso marcaba
+recién el tiempo 1). Además pidió sacar el atenuado del sistema inactivo
+("que solo vaya deslizando la barra tiempo por tiempo") y, por separado,
+que la barra "lea los silencios de negra y avance en ellos como si
+hubiera sonido".
+
+**Causa del desfase:** en `handleBeat()`, `beatsElapsedInSistema++` se
+ejecutaba ANTES de `updateCursorPosition()` — así que en el primer tiempo
+real (tras la cuenta de entrada), el contador ya valía 1 en el momento de
+ubicar la barra, y `compasIndex`/`beatInCompas` se calculaban como si ya
+hubiera sonado un tiempo de más. Se invirtió el orden: la barra se
+posiciona usando el valor de `beatsElapsedInSistema` SIN incrementar
+todavía (que es exactamente el índice 0-based del tiempo que está
+sonando en ese click), y recién después se incrementa para el conteo de
+progreso/el chequeo de fin de sistema — esos dos usos sí necesitan el
+valor post-incremento, sin cambios ahí.
+
+**Causa de los silencios ignorados:** `build_rhythm_map.py` (punto 64)
+excluía las notas `<rest/>` al armar la lista de eventos de cada compás
+—pensado originalmente para no confundir silencios con notas reales—,
+pero eso rompía el conteo acumulado de duración para cualquier tiempo que
+cayera DESPUÉS de un silencio dentro del mismo compás (el acumulador
+nunca sumaba la duración del silencio salteado). Se verificó que los
+silencios en este XML también traen `default-x` (Sibelius posiciona todo,
+no solo las notas), así que la corrección fue simple: dejar de excluirlos
+de la lista de eventos (solo se siguen excluyendo las notas de acorde,
+que no suman tiempo nuevo). Se recalculó el mapa de ritmo completo con
+esta corrección.
+
+**Atenuado removido:** por pedido explícito, se sacaron los divs
+`.score-dim-top`/`.score-dim-bottom` del markup, la lógica que los
+posicionaba/alternaba en `updateSystemVisuals()`, y las reglas CSS
+`.score-dim`/`.score-dim.active` — quedan sin uso, se borraron en vez de
+dejarlas de código muerto. Los dos sistemas quedan siempre a la vista
+normal; solo se mueve la barra.
+
+**Verificado en el navegador:** mismo paso de prueba ("Am") que el punto
+64, con el mapa de ritmo recalculado (silencios incluidos). Se confirmó
+que, exactamente en el instante en que el sistema de abajo arranca
+(primer tiempo real de ese sistema), la barra ya muestra la posición
+`ritmoAbajo[0][0]` — antes del fix hubiera mostrado `ritmoAbajo[0][1]`.
+Se recorrieron las posiciones sucesivas del sistema de arriba (incluido
+el último compás, corto, con silencios) y todas coincidieron con los
+valores recalculados. Se confirmó que ningún elemento `.score-dim*`
+existe más en el DOM durante la reproducción. Sin errores de consola.
+Ejercicio e imagen de prueba borrados de `localStorage` al terminar. El
+backup con `ritmoArriba`/`ritmoAbajo` ya entregado al usuario (punto 64)
+se regeneró con los valores corregidos (silencios incluidos) antes de
+reenviarlo.

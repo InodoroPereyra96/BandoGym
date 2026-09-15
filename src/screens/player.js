@@ -603,8 +603,6 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
       scoreFrame.innerHTML = `
         <div class="score-inner">
           <img src="${customImg}" alt="Partitura: ${p.etiqueta}" />
-          <div class="score-dim score-dim-top"></div>
-          <div class="score-dim score-dim-bottom"></div>
           <div class="score-cursor"></div>
         </div>`;
       const imgEl = scoreFrame.querySelector('img');
@@ -712,9 +710,16 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
       return;
     }
     if (phase !== 'playing') return;
+    // Ver DECISIONES.md punto 65: la barra se mueve ANTES de sumar el
+    // tiempo que acaba de sonar, no después — `beatsElapsedInSistema`
+    // (todavía sin incrementar acá) es exactamente el índice 0-based del
+    // tiempo que está sonando en este click (0 en el primer tiempo real
+    // tras la cuenta de entrada, 1 en el segundo, etc.). Sumar primero y
+    // recién después mover la barra la hacía mostrar siempre el tiempo
+    // SIGUIENTE al que realmente estaba sonando.
+    updateCursorPosition();
     beatsElapsedInSistema++;
     renderSegments();
-    updateCursorPosition();
     if (beatsElapsedInSistema >= beatsPerSistema()) {
       // Ver DECISIONES.md punto 58: si el paso tiene 2 sistemas y todavía
       // está sonando el de arriba, se salta al de abajo SIN cambiar de
@@ -732,23 +737,21 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   }
 
   /**
-   * Ver DECISIONES.md punto 58/59: posiciona el atenuado del sistema
-   * inactivo (si hay 2) y la barra de práctica sobre el sistema activo,
-   * según lo que haya encontrado `detectSystemLayout()` para la imagen
-   * actual. Sin detección, o fuera de modo automático/reproduciendo, no se
-   * muestra nada — la función es segura de llamar en cualquier momento, no
-   * solo desde `handleBeat`.
+   * Ver DECISIONES.md puntos 58/59/65: posiciona la barra de práctica
+   * sobre el sistema activo, según lo que haya encontrado
+   * `detectSystemLayout()` para la imagen actual. Los dos sistemas quedan
+   * siempre a la vista, sin atenuar el que no suena (se probó atenuando
+   * el inactivo y el usuario pidió sacarlo — solo quiere la barra
+   * deslizando, ver punto 65). Sin detección, o fuera de modo
+   * automático/reproduciendo, no se muestra nada — la función es segura
+   * de llamar en cualquier momento, no solo desde `handleBeat`.
    */
   function updateSystemVisuals() {
-    const dimTop = scoreFrame.querySelector('.score-dim-top');
-    const dimBottom = scoreFrame.querySelector('.score-dim-bottom');
     const cursor = scoreFrame.querySelector('.score-cursor');
-    if (!dimTop || !dimBottom || !cursor) return;
+    if (!cursor) return;
     const systems = systemLayout && systemLayout.systems;
     const activo = phase === 'playing' && mode === 'auto' && systems && systems.length > 0;
     if (!activo) {
-      dimTop.classList.remove('active');
-      dimBottom.classList.remove('active');
       cursor.classList.remove('active');
       return;
     }
@@ -757,20 +760,6 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
     // referencia un índice que no existe — se limita al de arriba.
     const clampedIndex = Math.min(systemIndex, systems.length - 1);
     const activeSystem = systems[clampedIndex];
-    if (systems.length > 1) {
-      const system1 = systems[0];
-      const system2 = systems[1];
-      dimTop.style.top = `${system1.topFrac * 100}%`;
-      dimTop.style.height = `${(system1.bottomFrac - system1.topFrac) * 100}%`;
-      dimBottom.style.top = `${system2.topFrac * 100}%`;
-      dimBottom.style.height = `${(system2.bottomFrac - system2.topFrac) * 100}%`;
-      dimTop.classList.toggle('active', clampedIndex === 1); // atenuado arriba mientras suena abajo
-      dimBottom.classList.toggle('active', clampedIndex === 0); // atenuado abajo mientras suena arriba
-    } else {
-      // Paso de 1 solo sistema: nada que atenuar, solo se muestra la barra.
-      dimTop.classList.remove('active');
-      dimBottom.classList.remove('active');
-    }
     cursor.style.top = `${activeSystem.topFrac * 100}%`;
     cursor.style.height = `${(activeSystem.bottomFrac - activeSystem.topFrac) * 100}%`;
     cursor.classList.add('active');
