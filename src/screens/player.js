@@ -476,22 +476,28 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
     const isFs = document.fullscreenElement === scoreFrameWrap;
     fullscreenBtn.textContent = isFs ? '✕' : '⛶';
     fullscreenBtn.setAttribute('aria-label', isFs ? 'Salir de pantalla completa' : 'Pantalla completa');
-    // El marco cambia de tamaño real al entrar/salir de pantalla completa
-    // (ver reglas :fullscreen en styles.css): se espera un frame a que el
-    // navegador termine de aplicar el nuevo layout antes de remedirlo.
-    requestAnimationFrame(applyAutoTransform);
+    // El recálculo de tamaño en sí lo dispara `scoreFrameResizeObserver` de
+    // abajo, no este handler — ver DECISIONES.md punto 61.
   }
   document.addEventListener('fullscreenchange', onFsChange);
 
-  // Cambios de tamaño de ventana/orientación (fuera de pantalla completa)
-  // también cambian el marco disponible — se recalcula con un debounce
-  // chico para no recalcular en cada píxel mientras se redimensiona.
-  let resizeTimer = null;
-  function onWindowResize() {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(applyAutoTransform, 150);
-  }
-  window.addEventListener('resize', onWindowResize);
+  // Ver DECISIONES.md punto 61: recalcular con un solo `requestAnimationFrame`
+  // tras `fullscreenchange`/`resize` (como hacía antes) asume que el
+  // navegador ya terminó de aplicar el nuevo layout en ESE frame puntual —
+  // no siempre es cierto (la transición a pantalla completa puede tardar
+  // más de un frame en algunos navegadores/dispositivos), y si se mide
+  // antes de tiempo, la escala mal calculada queda pegada hasta el próximo
+  // cambio de tamaño. Un `ResizeObserver` sobre el marco dispara
+  // exactamente cuando su tamaño YA cambió de verdad, sea cual sea la
+  // causa (pantalla completa, resize de ventana, rotación) — reemplaza al
+  // listener de `resize` + debounce Y al `requestAnimationFrame` de
+  // `onFsChange` de una sola vez, sin necesidad de adivinar el timing.
+  let resizeObserverTimer = null;
+  const scoreFrameResizeObserver = new ResizeObserver(() => {
+    clearTimeout(resizeObserverTimer);
+    resizeObserverTimer = setTimeout(applyAutoTransform, 60);
+  });
+  scoreFrameResizeObserver.observe(scoreFrame);
 
   fullscreenBtn.addEventListener('click', () => {
     if (!document.fullscreenElement) {
@@ -873,8 +879,8 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   cleanupFn = () => {
     document.removeEventListener('fullscreenchange', onFsChange);
     window.removeEventListener('keydown', onKeyDown);
-    window.removeEventListener('resize', onWindowResize);
-    clearTimeout(resizeTimer);
+    scoreFrameResizeObserver.disconnect();
+    clearTimeout(resizeObserverTimer);
   };
 
   modePicker.addEventListener('click', (e) => {

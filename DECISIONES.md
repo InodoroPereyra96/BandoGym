@@ -2786,3 +2786,96 @@ es justo donde está la barra de compás real detectada). `detectSystemSplit`
 quedó sin usos (reemplazada por `detectSystemLayout`) y se borró de
 `util.js`. Sin errores de consola nuevos. Ejercicio e imagen de prueba
 borrados de `localStorage` al terminar.
+
+## 60. Botón para eliminar un ejercicio
+
+**Pedido:** el usuario pidió un botón para eliminar ejercicios — hasta
+ahora no existía ninguna forma de borrar un ejercicio propio desde la app
+(solo se podían crear/editar).
+
+**Decisión:** `store.deleteCustomExercise(exerciseId)` (nuevo) borra el
+ejercicio de `fuelle:customExercises:v2` y, además, todo lo que le
+pertenece únicamente a él para no dejar basura huérfana en
+`localStorage`: las imágenes y audios de sus pasos (o los del ejercicio
+mismo si es tipo "fuelle"), su progreso (`fuelle:progress`) y sus
+preferencias de reproductor (`fuelle:playerSettings:v2:<id>`, clave propia
+por ejercicio fuera de `KEYS`). En `newExercise.js`, un botón "🗑 Eliminar
+ejercicio" (rojo/vino, `.btn-wine`) aparece solo en modo edición (no tiene
+sentido borrar algo que todavía no existe) al final del formulario, y usa
+`confirmDialog()` (ui.js, el mismo diálogo estilado que ya se usa para
+restaurar un backup — ver ronda 7 punto 37) en vez de `window.confirm()`
+nativo, avisando que la acción no se puede deshacer.
+
+**Por qué:** con varios ejercicios de prueba/duplicados dando vueltas
+(ver "Arpegios menore" vs "Arpegios menoress" del punto 57, o el nuevo
+"Arpegios menores" sin typo del punto 59) hacía falta una forma de
+limpiar sin tener que editar `localStorage` a mano.
+
+**Verificado en el navegador:** ejercicio de prueba con paso, imagen,
+audio, progreso y configuración de reproductor cargados a propósito en
+`localStorage`; se tocó "Eliminar ejercicio", se confirmó el diálogo, y
+se comprobaron las 5 claves relacionadas — todas ausentes después de
+borrar, navegación correcta a Bandoteca, sin errores de consola.
+
+## 61. Investigación de un margen inconsistente entre pasos en pantalla completa (no se pudo confirmar la causa exacta; se endureció un punto débil real de todos modos)
+
+**Reporte del usuario:** en pantalla completa, mandó 2 capturas mostrando
+que el margen ("zócalo") debajo del pentagrama variaba visiblemente entre
+un paso y otro — con las imágenes YA del molde consistente (puntos 56/57),
+así que no era un problema de recorte. Preguntó si convenía volver a
+cargar todo de cero.
+
+**Investigación:** se midió `computeContentTransform()` directo (sin pasar
+por la app) contra 2 pares de imágenes reales, en 2 proporciones de marco
+distintas (parecida a escritorio, y a pantalla completa 1920×1080) — en
+los 4 casos dio exactamente el mismo `scale` para ambas imágenes de cada
+par, con una diferencia de traslación vertical de ~1.5-2% (imperceptible).
+Un intento posterior de simular pantalla completa manipulando el DOM del
+reproductor en vivo (ya que la API real de pantalla completa exige un
+gesto de usuario genuino, no se puede disparar por script) sí mostró una
+imagen "gigante" y cortada — pero se confirmó que era un artefacto de la
+simulación (el tamaño del marco se cambiaba a mano DESPUÉS de que la
+transformación ya se había calculado con el tamaño viejo, sin
+recalcularla), no evidencia de un bug real de la app.
+
+**No se pudo reproducir el bug reportado de forma confiable.** Sin
+embargo, revisando el código real que dispara el recálculo al entrar a
+pantalla completa (`onFsChange`), se encontró un punto débil genuino e
+independiente: el recálculo se hacía con un solo `requestAnimationFrame`
+después del evento `fullscreenchange`, asumiendo que el navegador ya
+había terminado de aplicar el nuevo layout en ESE frame — no siempre es
+cierto (la transición a pantalla completa puede tardar más de un frame en
+algunos navegadores/dispositivos, especialmente iOS Safari), y si se mide
+antes de tiempo, la escala mal calculada queda pegada hasta el próximo
+cambio de tamaño real.
+
+**Decisión:** se reemplazó el listener de `fullscreenchange` (que hacía el
+recálculo) + el listener de `resize` con debounce por un único
+`ResizeObserver` sobre `#scoreFrame`, que dispara exactamente cuando el
+tamaño del marco YA cambió de verdad — sea la causa pantalla
+completa/salir de ella, resize de ventana, o rotación — sin depender de
+adivinar cuántos frames tarda cada transición. Es un cambio defendible por
+sí solo (más robusto que la lógica vieja) independientemente de si era la
+causa exacta de lo que vio el usuario.
+
+**Por qué no se seleccionó "recargar todo de nuevo" como solución:** no
+había ninguna razón técnica para creer que volver a subir las mismas
+imágenes (ya recortadas con el molde consistente) iba a cambiar algo —
+`computeContentTransform` da resultados idénticos con los datos que ya
+había. Recargar a ciegas sin entender la causa hubiera sido un
+"arreglo" de fe, no una solución — se prefirió investigar primero (ver
+DECISIONES.md, patrón repetido de no adivinar sin evidencia).
+
+**Pendiente:** no se pudo confirmar con certeza que este haya sido el bug
+que vio el usuario (la API de pantalla completa real no se puede probar
+por automatización). Queda a la espera de que lo prueble en su dispositivo
+real después de este cambio y confirme si se resolvió o si el problema
+persiste — en cuyo caso hace falta seguir investigando con más datos
+(ej. qué pasos puntuales, capturas con la etiqueta de tonalidad visible).
+
+**Verificado en el navegador:** se comprobó que el `ResizeObserver` nuevo
+dispara y recalcula correctamente ante cambios de tamaño de viewport
+reales (no simulados a mano) — la transformación aplicada coincidió
+exactamente con un cálculo fresco hecho en el momento, en varios tamaños
+de marco distintos. Sin errores de consola. Ejercicio e imágenes de
+prueba borrados de `localStorage` al terminar.

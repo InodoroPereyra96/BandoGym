@@ -29,7 +29,7 @@ import {
   NOMBRE_GRUPO_ARPEGIOS_MENORES, BPM_OPTIONS, COMPAS_OPTIONS, ACENTO_OPTIONS, BPM_MIN, BPM_MAX,
 } from '../theory.js';
 import { escapeHTML, normalizeNombre } from '../util.js';
-import { toast } from '../ui.js';
+import { toast, confirmDialog } from '../ui.js';
 
 export function render(container, { param, navigate }) {
   const existing = param ? store.getExerciseById(param) : null;
@@ -157,6 +157,7 @@ export function render(container, { param, navigate }) {
       </div>
 
       <button type="submit" class="btn btn-primary" id="submitBtn">${isEdit ? 'Guardar cambios' : 'Guardar ejercicio'}</button>
+      ${isEdit ? '<button type="button" class="btn btn-wine" id="deleteExerciseBtn" style="margin-top:10px;">🗑 Eliminar ejercicio</button>' : ''}
     </form>
   `;
 
@@ -520,4 +521,25 @@ export function render(container, { param, navigate }) {
     }
     navigate('#/biblioteca');
   });
+
+  // Ver DECISIONES.md punto 60: solo visible al editar (no tiene sentido
+  // "eliminar" algo que todavía no se guardó). Usa el mismo diálogo de
+  // confirmación estilado que restaurar un backup (ui.js), no
+  // `window.confirm()` nativo.
+  const deleteBtn = container.querySelector('#deleteExerciseBtn');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', async () => {
+      const ok = await confirmDialog({
+        title: 'Eliminar ejercicio',
+        message: `Esto borra "${exercise.nombre || 'este ejercicio'}" junto con sus imágenes y audios cargados. No se puede deshacer. ¿Continuar?`,
+        confirmLabel: 'Eliminar',
+        cancelLabel: 'Cancelar',
+        danger: true,
+      });
+      if (!ok) return;
+      store.deleteCustomExercise(exercise.id);
+      toast('Ejercicio eliminado.');
+      navigate('#/biblioteca');
+    });
+  }
 }

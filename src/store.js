@@ -98,6 +98,42 @@ export function getAllExercises() {
   return [...SEED_EXERCISES, ...getCustomExercises()];
 }
 
+/**
+ * Borra un ejercicio propio y todo lo que le pertenece únicamente a él:
+ * sus imágenes y audios (los del ejercicio mismo si es tipo "fuelle", y los
+ * de cada paso si es escala/arpegio), su progreso guardado y sus
+ * preferencias de reproductor (`fuelle:playerSettings:v2:<id>`, clave
+ * aparte por ejercicio, no vive en KEYS). Ver DECISIONES.md punto 60.
+ * Devuelve el ejercicio borrado (o `null` si no existía, ej. ya se había
+ * borrado desde otra pestaña).
+ */
+export function deleteCustomExercise(exerciseId) {
+  const list = getCustomExercises();
+  const exercise = list.find((e) => e.id === exerciseId) || null;
+  saveCustomExercises(list.filter((e) => e.id !== exerciseId));
+
+  const idsToClean = [exerciseId, ...((exercise && exercise.pasos) || []).map((p) => p.id)];
+  const images = getCustomImages();
+  const audios = getCustomAudios();
+  let imagesChanged = false;
+  let audiosChanged = false;
+  idsToClean.forEach((id) => {
+    if (id in images) { delete images[id]; imagesChanged = true; }
+    if (id in audios) { delete audios[id]; audiosChanged = true; }
+  });
+  if (imagesChanged) writeJSON(KEYS.images, images);
+  if (audiosChanged) writeJSON(KEYS.audios, audios);
+
+  const progress = getProgress();
+  if (exerciseId in progress) {
+    delete progress[exerciseId];
+    saveProgress(progress);
+  }
+  localStorage.removeItem(`fuelle:playerSettings:v2:${exerciseId}`);
+
+  return exercise;
+}
+
 export function getExerciseById(id) {
   return getAllExercises().find((e) => e.id === id) || null;
 }
