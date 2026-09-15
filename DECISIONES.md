@@ -3138,3 +3138,122 @@ arriba con sondeos cada 90ms — las 12 aparecieron esta vez, incluida la
 paso (sin más pasos configurados) y terminó correctamente en la pantalla
 de calificación, sin quedar colgado. Ejercicio e imagen de prueba
 borrados de `localStorage` al terminar.
+
+## 67. Anotaciones a mano sobre la partitura (lápiz, resaltador, goma) — capa aparte, por paso, con zoom y respaldo
+
+**Pedido del usuario:** poder escribir digitación, marcar o tachar sobre
+la partitura del Reproductor sin tocar la imagen original — un botón
+flotante con el mismo estilo visual del botón "Volver" flotante ya
+existente, que despliega lápiz (2 colores, negro/rojo)/resaltador/goma;
+guardado permanente por paso individual (no por ejercicio entero),
+incluido en el respaldo/restauración (punto 37); compatible con el zoom
+ya existente (punto 18 y siguientes). Pedido explícitamente autónomo, sin
+preguntas — implementado sin librerías externas, documentado acá.
+
+**Enfoque técnico — `<canvas>` transparente dentro de `.score-inner`:**
+se agregó `src/annotate.js` (`attachAnnotationLayer`), que crea un
+`<canvas class="score-annotate">` como hermano de la `<img>` y de
+`.score-cursor` DENTRO de `.score-inner` — el mismo contenedor al que
+`zoom.js` le aplica el `transform` de pellizco/paneo/doble-tap (ver punto
+18). Al ser un hijo más de ese contenedor, el canvas hereda el mismo
+`transform` automáticamente: no hace falta ningún código de
+sincronización aparte para que el dibujo se mantenga pegado a la
+partitura en cualquier nivel de zoom (punto 6 del pedido) — se verificó
+en el navegador aplicando transforms arbitrarios (`translate`+`scale`) a
+`.score-inner` y comparando `getBoundingClientRect()` de la imagen contra
+el del canvas: coinciden siempre, exactos.
+
+**Coordenadas y persistencia:** cada trazo se guarda como
+`{ tool, color, points: [[xFrac, yFrac], ...] }`, con `xFrac`/`yFrac`
+FRACCIONALES (0..1) relativos al tamaño NATURAL de la imagen (no a
+píxeles de pantalla) — así el dibujo se redibuja igual de alineado sin
+importar el tamaño real de pantalla o si la imagen se renormaliza (punto
+33). Para convertir un toque a esa fracción alcanza con
+`canvas.getBoundingClientRect()` (que ya refleja cualquier `transform`
+CSS vigente en ese instante) — el mismo principio que evita que `zoom.js`
+tenga que leer/deshacer la matriz de transformación a mano. Persistencia:
+`store.getAnnotationsFor(pasoId)`/`setAnnotationsFor(pasoId, strokes)`,
+bajo la clave `fuelle:annotations:v1`, estructura
+`{ [pasoId]: [stroke, ...] }` — como CUALQUIER clave con el prefijo
+`fuelle:`, queda incluida SOLA en `buildBackup()`/`restoreBackup()` (ver
+`store.js`, ronda 7 punto 37: el respaldo recorre todo el prefijo, no una
+lista a mano) sin tocar ese código; se agregó además a la limpieza de
+`deleteCustomExercise` (junto a imágenes/audios) para no dejar trazos
+huérfanos al borrar un ejercicio o repetirlos si se reusara un id.
+
+**Botón flotante y menú:** `.annotate-fab` (círculo bordó `--wine` con
+sombra — mismo lenguaje visual que `body.is-player .back-btn`, el botón
+"Volver" flotante de Práctica horizontal, tal como pidió el usuario),
+abajo a la derecha del marco (el de pantalla completa ya ocupa arriba a
+la derecha). Al tocarlo despliega `.annotate-menu` HACIA ARRIBA (3
+botones: lápiz/resaltador/goma, íconos SVG propios de trazo — sin emoji,
+siguiendo la convención ya establecida en toda la app, ver puntos 45/46/
+50/52-53) más 2 círculos de color SOLO cuando el lápiz está elegido.
+Tocar la herramienta ya activa la apaga (mismo patrón de toggle que
+`metroVolToggle`); el menú se auto-colapsa apenas se empieza a dibujar de
+verdad (primer `pointerdown` sobre el canvas) para no tapar la partitura,
+y también se cierra si se toca cualquier otro lado de la pantalla — pero
+en ningún caso apaga la herramienta activa sola, así se puede seguir
+dibujando con el menú cerrado. Un puntito dorado en el botón indica
+"herramienta activa" incluso con el menú colapsado.
+
+**Compatibilidad con zoom/toques existentes:** el canvas arranca con
+`pointer-events: none` — en ese estado los toques atraviesan derecho a la
+imagen de abajo y burbujean sin cambios hasta `zoom.js` (pellizco,
+doble-tap, y el toque-para-avanzar del modo manual, punto 36, siguen
+funcionando exactamente igual que antes de esta función). Recién pasa a
+`pointer-events: auto` mientras hay una herramienta elegida, y en ese
+momento cada `pointerdown/move/up` llama `stopPropagation()` para que
+`zoom.js` no vea esos toques — **limitación documentada:** mientras se
+está dibujando, el pellizco/doble-tap/toque-avanzar quedan en pausa (para
+no confundir "estoy dibujando" con "estoy pellizcando para hacer zoom");
+para reencuadrar hay que apagar la herramienta un momento. Como la
+posición de cada trazo se guarda en fracción (no en píxeles de pantalla),
+el dibujo queda igual de alineado sea cual sea el zoom vigente al
+reactivar la herramienta.
+
+**Goma de borrar — por trazo entero, no por píxel:** tocar/arrastrar
+cerca de CUALQUIER punto de un trazo (radio ~2.5% del ancho de la imagen)
+borra ese trazo COMPLETO, no mancha un área a nivel píxel. Es la
+implementación más simple y robusta sin librerías: borrar de verdad a
+nivel píxel (`globalCompositeOperation: 'destination-out'`) complica la
+mezcla con el resaltador semitransparente (una vez compuestos los
+píxeles ya no se pueden "restar" limpio), y el pedido del usuario
+("tocando/arrastrando sobre el trazo a borrar") ya describe borrar
+trazos, no manchar. **Limitación documentada:** no se puede borrar una
+PARTE de un trazo largo, solo el trazo entero — para partituras (marcas
+cortas de digitación, tachones puntuales) es un compromiso razonable;
+si hiciera falta borrado parcial más adelante, es un cambio acotado a
+`eraseAt()` en `annotate.js`.
+
+**Resaltador — un solo color, elegido por mí (punto 3 del pedido):**
+amarillo clásico de fibrón (`#ffd94a`) al 35% de opacidad, trazo grueso
+(2% del ancho de la imagen) — el color más asociado a "resaltador" en el
+uso cotidiano, y el que mejor contrasta sin tapar tinta negra de la
+partitura debajo.
+
+**Alcance:** solo se implementó para el Reproductor de ejercicios de
+escala/arpegio (`renderEscalaArpegio`, el que tiene pasos + zoom, ver
+punto 18) — los ejercicios de tipo "fuelle" (temporizador simple, sin
+zoom ni pasos, ver `renderFuelle`) no tienen esta función: el pedido del
+usuario hablaba explícitamente de "paso puntual del ejercicio" y de
+convivir con el zoom, ninguno de los dos existe en esa pantalla.
+
+**Verificado en el navegador:** ejercicio+paso de prueba con imagen SVG
+real. Se dibujó con lápiz negro (trazo multi-punto), se cambió a lápiz
+rojo y se dibujó otro trazo, se activó el resaltador y se dibujó un
+tercero (color/alfa/ancho correctos en el dato guardado), se activó la
+goma y se borró el trazo rojo tocándolo (desapareció solo ese trazo, los
+otros dos quedaron intactos) — todo confirmado leyendo
+`localStorage['fuelle:annotations:v1']` tras cada paso. Se recargó la
+página por completo (`location.reload()`) y el canvas volvió a pintar los
+trazos guardados (se contaron píxeles no transparentes antes/después:
+coinciden). Se aplicó un `transform` de zoom arbitrario a `.score-inner`
+y se confirmó que el `getBoundingClientRect()` del canvas coincide exacto
+con el de la imagen (dos veces, con escalas/traslaciones distintas). Se
+confirmó que la clave `fuelle:annotations:v1` tiene el prefijo `fuelle:`
+(la incluye el respaldo genérico sin tocar código de exportación). Se
+llamó a `store.deleteCustomExercise()` sobre el ejercicio de prueba y se
+confirmó que también borra sus anotaciones (junto con imagen y el
+ejercicio mismo) — sin dejar nada huérfano. Ejercicio, imagen y
+anotaciones de prueba quedaron completamente limpios al terminar.

@@ -21,6 +21,7 @@ const KEYS = {
   audios: 'fuelle:customAudios:v2',
   today: 'fuelle:todayState:v2',
   audioSettings: 'fuelle:audioSettings',
+  annotations: 'fuelle:annotations:v1',
 };
 
 // Prefijo común de TODAS las claves de la app en localStorage — incluye las
@@ -115,14 +116,18 @@ export function deleteCustomExercise(exerciseId) {
   const idsToClean = [exerciseId, ...((exercise && exercise.pasos) || []).map((p) => p.id)];
   const images = getCustomImages();
   const audios = getCustomAudios();
+  const annotations = readJSON(KEYS.annotations, {});
   let imagesChanged = false;
   let audiosChanged = false;
+  let annotationsChanged = false;
   idsToClean.forEach((id) => {
     if (id in images) { delete images[id]; imagesChanged = true; }
     if (id in audios) { delete audios[id]; audiosChanged = true; }
+    if (id in annotations) { delete annotations[id]; annotationsChanged = true; }
   });
   if (imagesChanged) writeJSON(KEYS.images, images);
   if (audiosChanged) writeJSON(KEYS.audios, audios);
+  if (annotationsChanged) writeJSON(KEYS.annotations, annotations);
 
   const progress = getProgress();
   if (exerciseId in progress) {
@@ -167,6 +172,23 @@ export function setCustomAudio(pasoId, bpm, dataUrl) {
   if (!map[pasoId]) map[pasoId] = {};
   map[pasoId][bpm] = dataUrl;
   writeJSON(KEYS.audios, map);
+}
+
+// ---------- Anotaciones a mano sobre la partitura, por paso (ver DECISIONES.md punto 67) ----------
+// Estructura: { [pasoId]: [ { tool, color, points: [[xFrac,yFrac], ...] }, ... ] } — cada paso
+// tiene su propia lista de trazos, independiente de la imagen (que nunca se modifica). Vive bajo
+// el prefijo `fuelle:` como todo lo demás, así queda incluida sola en el respaldo/restauración
+// (ver `buildBackup`/`restoreBackup` más abajo) sin necesidad de tocar ese código.
+export function getAnnotationsFor(pasoId) {
+  const map = readJSON(KEYS.annotations, {});
+  return map[pasoId] || [];
+}
+
+export function setAnnotationsFor(pasoId, strokes) {
+  const map = readJSON(KEYS.annotations, {});
+  if (strokes && strokes.length > 0) map[pasoId] = strokes;
+  else delete map[pasoId];
+  writeJSON(KEYS.annotations, map);
 }
 
 export function removeCustomAudio(pasoId, bpm) {

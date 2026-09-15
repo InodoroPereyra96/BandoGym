@@ -709,6 +709,119 @@ input, select, textarea {
 }
 .score-cursor.active { opacity: 0.85; }
 
+/* Capa de anotaciones a mano (ver DECISIONES.md punto 67): mismo truco que
+   `.score-cursor` de arriba (absoluto dentro de `.score-inner`, así hereda
+   el mismo transform de zoom/paneo que la imagen), pero cubriendo el marco
+   entero en vez de una sola línea vertical. `pointer-events` arranca en
+   'none' y solo pasa a 'auto' desde JS (ver annotate.js `setTool`) mientras
+   hay una herramienta elegida — así no interfiere con el pellizco/doble-tap/
+   toque-para-avanzar de siempre cuando el usuario no está dibujando. */
+.score-annotate {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  touch-action: none;
+  cursor: crosshair;
+}
+.score-annotate.erasing { cursor: cell; }
+
+/* ---------- Botón flotante de anotaciones (ver DECISIONES.md punto 67) ----------
+   Mismo lenguaje visual que el botón flotante "Volver" de Práctica horizontal
+   (círculo bordó `--wine` con sombra, ver más abajo `body.is-player .back-btn`):
+   un círculo sólido con ícono blanco y sombra, flotando sobre la partitura.
+   Se ubica abajo a la derecha del marco (el de pantalla completa ya ocupa
+   arriba a la derecha) — `column-reverse` hace que el menú se despliegue
+   HACIA ARRIBA desde el botón, nunca tapado por los controles de abajo. */
+.annotate-widget {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  z-index: 6;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.annotate-fab {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--wine);
+  border: none;
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  font-size: 1.1rem;
+  position: relative;
+}
+.annotate-fab:active { background: var(--wine-strong); }
+
+/* Puntito dorado: recordatorio visual de que hay una herramienta activa
+   incluso con el menú colapsado (ver DECISIONES.md punto 67). */
+.annotate-fab.has-tool::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 1.5px solid var(--wine);
+}
+
+.annotate-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: rgba(26, 13, 16, 0.72);
+  border-radius: 18px;
+  padding: 6px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+.annotate-tool-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.annotate-tool-btn.active {
+  background: var(--gold);
+  color: var(--gold-ink);
+  border-color: var(--gold);
+}
+
+.annotate-colors {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  padding: 2px 0;
+}
+.annotate-color-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  padding: 0;
+}
+.annotate-color-btn.active {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.4);
+}
+
 .score-frame-wrap {
   position: relative;
   margin-bottom: 14px;

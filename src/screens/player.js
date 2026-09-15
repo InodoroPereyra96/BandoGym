@@ -31,6 +31,7 @@ import { NIVEL_LABEL, ARTICULACION_LABEL, BPM_OPTIONS, BPM_MIN, BPM_MAX, GRUPO_A
 import { toast } from '../ui.js';
 import { createMetronome } from '../metronome.js';
 import { attachPinchZoom } from '../zoom.js';
+import { attachAnnotationLayer, TOOL_PENCIL, TOOL_HIGHLIGHTER, TOOL_ERASER, PENCIL_COLORS } from '../annotate.js';
 
 let cleanupFn = null;
 const metronome = createMetronome();
@@ -64,6 +65,14 @@ const ICON_METRONOME = '<svg viewBox="0 0 24 24" width="1.6em" height="1.6em" fi
 // acompañan esa altura para leerse como los botones reales del fuelle
 // doblado.
 const ICON_BANDONEON_MINI = '<svg viewBox="0 0 30 24" width="1.6em" height="1.6em" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10L9.6 19 13.2 7 16.8 17 20.4 4 24 15"/><circle cx="2.5" cy="8" r="1.1" fill="currentColor" stroke="none"/><circle cx="2.5" cy="13.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="2.5" cy="19" r="1.1" fill="currentColor" stroke="none"/><circle cx="27.5" cy="4" r="1.1" fill="currentColor" stroke="none"/><circle cx="27.5" cy="9.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="27.5" cy="15" r="1.1" fill="currentColor" stroke="none"/></svg>';
+
+// Íconos de la capa de anotaciones (ver DECISIONES.md punto 67): mismo estilo
+// de trazo que el resto de la familia (SVG propio, stroke redondeado, sin
+// emoji — ver puntos 45/46/50/52-53 sobre por qué esta app no usa glyphs de
+// emoji para íconos funcionales).
+const ICON_PENCIL = '<svg viewBox="0 0 24 24" width="1.1em" height="1.1em" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4.2L15.8 5l3.2 3.2L8.2 19 4 20z"/><path d="M13.6 6.4l3.2 3.2"/></svg>';
+const ICON_HIGHLIGHTER = '<svg viewBox="0 0 24 24" width="1.1em" height="1.1em" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9.6" y="2.4" width="5" height="10.4" rx="1.2" transform="rotate(35 12.1 7.6)"/><path d="M9 12.7L5 20l6-2.2"/></svg>';
+const ICON_ERASER = '<svg viewBox="0 0 24 24" width="1.1em" height="1.1em" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="12" height="7" rx="1.4" transform="rotate(-20 11 14.5)"/><path d="M8.5 18.2h10"/></svg>';
 
 function settingsKey(id) {
   return `fuelle:playerSettings:v2:${id}`;
@@ -280,6 +289,18 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   // cargada, no en cada beat.
   let systemLayout = null;
 
+  // Capa de anotaciones a mano sobre la partitura (ver DECISIONES.md punto
+  // 67): `annotationLayer` es la instancia devuelta por
+  // `attachAnnotationLayer` para el paso ACTUAL (se recrea en cada
+  // `paintTonalidad`, igual que `systemLayout`); `annotateTool`/
+  // `annotateColor`/`annotateOpen` son la elección del usuario, que persiste
+  // entre pasos (elegís lápiz rojo una vez y seguís dibujando así al pasar
+  // de paso, no hace falta re-elegirlo en cada imagen).
+  let annotationLayer = null;
+  let annotateTool = null; // null | TOOL_PENCIL | TOOL_HIGHLIGHTER | TOOL_ERASER
+  let annotateColor = PENCIL_COLORS[0];
+  let annotateOpen = false; // menú del botón flotante desplegado/colapsado
+
   // Tiempos del SISTEMA activo dentro del paso actual (arriba o abajo, ver
   // DECISIONES.md punto 58) — es lo que gobierna cuándo salta la barra de
   // práctica de un sistema al otro (o de un paso al siguiente, si el paso
@@ -309,6 +330,18 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
       <div class="score-frame-wrap" id="scoreFrameWrap">
         <div class="score-frame" id="scoreFrame"></div>
         <button class="icon-btn score-fs-btn" id="fullscreenBtn" aria-label="Pantalla completa">⛶</button>
+        <div class="annotate-widget" id="annotateWidget" hidden>
+          <button type="button" class="icon-btn annotate-fab" id="annotateFab" aria-haspopup="true" aria-expanded="false" aria-label="Anotar sobre la partitura">${ICON_PENCIL}</button>
+          <div class="annotate-menu" id="annotateMenu" hidden>
+            <button type="button" class="annotate-tool-btn" data-tool="${TOOL_PENCIL}" aria-label="Lápiz">${ICON_PENCIL}</button>
+            <button type="button" class="annotate-tool-btn" data-tool="${TOOL_HIGHLIGHTER}" aria-label="Resaltador">${ICON_HIGHLIGHTER}</button>
+            <button type="button" class="annotate-tool-btn" data-tool="${TOOL_ERASER}" aria-label="Goma de borrar">${ICON_ERASER}</button>
+            <div class="annotate-colors" id="annotateColors" hidden>
+              <button type="button" class="annotate-color-btn" data-color="${PENCIL_COLORS[0]}" style="background:${PENCIL_COLORS[0]}" aria-label="Lápiz negro"></button>
+              <button type="button" class="annotate-color-btn" data-color="${PENCIL_COLORS[1]}" style="background:${PENCIL_COLORS[1]}" aria-label="Lápiz rojo"></button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="player-side">
@@ -379,6 +412,10 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   const scoreFrameWrap = container.querySelector('#scoreFrameWrap');
   const scoreFrame = container.querySelector('#scoreFrame');
   const fullscreenBtn = container.querySelector('#fullscreenBtn');
+  const annotateWidget = container.querySelector('#annotateWidget');
+  const annotateFab = container.querySelector('#annotateFab');
+  const annotateMenu = container.querySelector('#annotateMenu');
+  const annotateColors = container.querySelector('#annotateColors');
   const progressLabel = container.querySelector('#progressLabel');
   const progressSegments = container.querySelector('#progressSegments');
   const tonalidadNombre = container.querySelector('#tonalidadNombre');
@@ -451,6 +488,60 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
       goTo(isRightHalf ? index + 1 : index - 1);
     },
   });
+
+  /**
+   * Refleja `annotateOpen`/`annotateTool`/`annotateColor` en el DOM del
+   * botón flotante y su menú (ver DECISIONES.md punto 67): qué está
+   * resaltado, si el menú/los colores se ven, y un puntito dorado en el
+   * botón cuando hay una herramienta activa (para que se note incluso con
+   * el menú colapsado que el dibujo sigue prendido).
+   */
+  function syncAnnotateUI() {
+    annotateMenu.hidden = !annotateOpen;
+    annotateFab.setAttribute('aria-expanded', String(annotateOpen));
+    annotateFab.classList.toggle('has-tool', !!annotateTool);
+    annotateMenu.querySelectorAll('[data-tool]').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.tool === annotateTool);
+    });
+    annotateColors.hidden = annotateTool !== TOOL_PENCIL;
+    annotateColors.querySelectorAll('[data-color]').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.color === annotateColor);
+    });
+  }
+
+  annotateFab.addEventListener('click', () => {
+    annotateOpen = !annotateOpen;
+    syncAnnotateUI();
+  });
+
+  annotateMenu.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-tool]');
+    if (!btn) return;
+    // Tocar la herramienta ya activa la apaga (mismo patrón de toggle que
+    // ya usan otros controles de esta pantalla, ej. `metroVolToggle`): es la
+    // forma de volver al zoom/paneo/avance manual normal sin un botón
+    // aparte de "cerrar".
+    annotateTool = annotateTool === btn.dataset.tool ? null : btn.dataset.tool;
+    if (annotationLayer) annotationLayer.setTool(annotateTool, annotateColor);
+    syncAnnotateUI();
+  });
+
+  annotateColors.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-color]');
+    if (!btn) return;
+    annotateColor = btn.dataset.color;
+    if (annotationLayer) annotationLayer.setTool(annotateTool, annotateColor);
+    syncAnnotateUI();
+  });
+
+  // Cierra el menú si se toca cualquier otro lado de la pantalla (fuera del
+  // botón flotante) — no apaga la herramienta activa, solo colapsa el menú.
+  function onDocumentPointerDown(e) {
+    if (!annotateOpen || annotateWidget.contains(e.target)) return;
+    annotateOpen = false;
+    syncAnnotateUI();
+  }
+  document.addEventListener('pointerdown', onDocumentPointerDown);
 
   /**
    * Recalcula la maximización automática de tamaño (ver DECISIONES.md
@@ -607,6 +698,19 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
         </div>`;
       const imgEl = scoreFrame.querySelector('img');
       zoomCtl.reset(); // valor neutro mientras se analiza esta imagen puntual
+      // Capa de anotaciones (ver DECISIONES.md punto 67): una instancia por
+      // paso, atada a SU imagen y SU propio historial de trazos (`p.id`). No
+      // hace falta esperar a que la imagen termine de cargar para crearla —
+      // `attachAnnotationLayer` ya se encarga de eso puertas adentro.
+      if (annotationLayer) annotationLayer.destroy();
+      const scoreInnerEl = scoreFrame.querySelector('.score-inner');
+      annotationLayer = attachAnnotationLayer(scoreInnerEl, imgEl, p.id);
+      annotationLayer.setTool(annotateTool, annotateColor);
+      annotationLayer.setMenuCollapseCallback(() => {
+        annotateOpen = false;
+        syncAnnotateUI();
+      });
+      annotateWidget.hidden = false;
       // Normalización + maximización automática de tamaño visual entre
       // pasos (ver DECISIONES.md puntos 31 y 33): se calcula recién cuando
       // la imagen terminó de cargar y de disponer su layout (hace falta su
@@ -637,7 +741,14 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
         nivel: exercise.nivel,
       })}</div>`;
       zoomCtl.reset();
+      // Sin imagen propia (placeholder SVG genérico): no hay nada real para
+      // anotar encima — se oculta el botón flotante y se descarta la capa
+      // del paso anterior, si había una (ver DECISIONES.md punto 67).
+      if (annotationLayer) { annotationLayer.destroy(); annotationLayer = null; }
+      annotateWidget.hidden = true;
     }
+    annotateOpen = false;
+    syncAnnotateUI();
     paintDots();
     paintAudioRow();
     beatsElapsedInSistema = 0;
@@ -896,9 +1007,11 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   paintTonalidad();
   cleanupFn = () => {
     document.removeEventListener('fullscreenchange', onFsChange);
+    document.removeEventListener('pointerdown', onDocumentPointerDown);
     window.removeEventListener('keydown', onKeyDown);
     scoreFrameResizeObserver.disconnect();
     clearTimeout(resizeObserverTimer);
+    if (annotationLayer) annotationLayer.destroy();
   };
 
   modePicker.addEventListener('click', (e) => {

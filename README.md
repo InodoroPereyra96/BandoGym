@@ -80,6 +80,8 @@ src/
                            respaldo/restauración completa (buildBackup/restoreBackup)
   metronome.js             Metrónomo con clicks generados por Web Audio API
   zoom.js                  Pellizco/doble-tap para hacer zoom sobre la partitura
+  annotate.js               Capa de anotaciones a mano (lápiz/resaltador/goma) sobre
+                             la partitura del reproductor, por paso
   ui.js / util.js          Helpers de interfaz y utilidades (badges, toast, diálogo de
                            confirmación, SVG placeholder…)
   styles.css               Toda la hoja de estilos (tema, componentes, layout)
@@ -144,6 +146,16 @@ src/
   —, sin tiempo fijo, ver punto 32), elegible por ejercicio con un selector
   arriba del reproductor. Los ejercicios de fuelle usan una versión
   simplificada (temporizador de práctica, sin metrónomo).
+- **Anotaciones a mano sobre la partitura**: botón flotante (mismo estilo
+  visual que el botón "Volver" de Práctica horizontal) sobre la imagen de
+  cada paso, con lápiz (negro o rojo), resaltador (trazo grueso
+  semitransparente) y goma de borrar (borra el trazo tocado/arrastrado
+  entero). El dibujo vive en una capa `<canvas>` aparte — nunca modifica la
+  imagen original —, queda guardado de forma permanente por paso individual
+  (no por ejercicio completo) y se mantiene alineado con la partitura en
+  cualquier nivel de zoom. Queda incluido automáticamente en el
+  exportar/importar de respaldo de Perfil (ver más abajo), sin configuración
+  aparte. Ver DECISIONES.md punto 67.
 - **Biblioteca**: listado completo filtrable por nivel y por tipo
   (fuelle/escala/arpegio); arranca vacía (ver más abajo). Cada ejercicio
   tiene un botón "✎ Editar" que abre el mismo formulario de alta precargado
@@ -170,8 +182,9 @@ src/
 - **Copia de seguridad (exportar / importar)**: como todo el contenido vive
   solo en `localStorage` (ver más abajo), Perfil tiene botones para
   **exportar** un respaldo completo (un archivo `fuelle-backup-<fecha>.json`
-  con todos los ejercicios propios, sus pasos, imágenes y audios en base64,
-  y el progreso/nivel) e **importar** uno previamente exportado, que
+  con todos los ejercicios propios, sus pasos, imágenes, audios y
+  anotaciones a mano en base64, y el progreso/nivel) e **importar** uno
+  previamente exportado, que
   **reemplaza todo** el contenido actual tras una confirmación explícita
   (no fusiona, para no generar duplicados — ver DECISIONES.md ronda 7,
   punto 37). También hay un aviso no invasivo en Perfil si pasó más de una
