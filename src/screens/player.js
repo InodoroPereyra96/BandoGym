@@ -721,18 +721,33 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
     beatsElapsedInSistema++;
     renderSegments();
     if (beatsElapsedInSistema >= beatsPerSistema()) {
-      // Ver DECISIONES.md punto 58: si el paso tiene 2 sistemas y todavía
-      // está sonando el de arriba, se salta al de abajo SIN cambiar de
-      // paso (mismo `index`, misma imagen) — recién cuando termina el de
-      // abajo (o el paso es de 1 solo sistema) se avanza al próximo paso.
-      if (systemIndex === 0 && pasoTieneDosSistemas(pasos[index])) {
-        systemIndex = 1;
-        beatsElapsedInSistema = 0;
-        renderSegments();
-        updateSystemVisuals();
-      } else {
-        goTo(index + 1);
-      }
+      // Ver DECISIONES.md punto 66: el cambio de sistema/paso reescribe la
+      // posición de la barra (al posicionarla al principio del sistema
+      // nuevo) en el mismo tick de JS que acaba de moverla al ÚLTIMO
+      // tiempo del sistema viejo — el navegador nunca llega a pintar ese
+      // último tiempo antes de que se pise, así que se veía como si la
+      // barra "saltara" el último tiempo. Se retrasa el cambio un
+      // instante (una fracción chica del tiempo actual, nunca más de
+      // 150ms) para darle al navegador la oportunidad de pintar esa
+      // última posición antes de reemplazarla — el sonido/conteo del
+      // metrónomo no se retrasa, solo el cambio visual/de imagen.
+      const beatMs = 60000 / bpm;
+      const deferMs = Math.min(150, beatMs * 0.4);
+      setTimeout(() => {
+        if (phase !== 'playing') return; // se pausó/cambió de paso durante la espera
+        // Ver DECISIONES.md punto 58: si el paso tiene 2 sistemas y todavía
+        // está sonando el de arriba, se salta al de abajo SIN cambiar de
+        // paso (mismo `index`, misma imagen) — recién cuando termina el de
+        // abajo (o el paso es de 1 solo sistema) se avanza al próximo paso.
+        if (systemIndex === 0 && pasoTieneDosSistemas(pasos[index])) {
+          systemIndex = 1;
+          beatsElapsedInSistema = 0;
+          renderSegments();
+          updateSystemVisuals();
+        } else {
+          goTo(index + 1);
+        }
+      }, deferMs);
     }
   }
 

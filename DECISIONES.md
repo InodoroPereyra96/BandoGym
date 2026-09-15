@@ -3089,3 +3089,52 @@ Ejercicio e imagen de prueba borrados de `localStorage` al terminar. El
 backup con `ritmoArriba`/`ritmoAbajo` ya entregado al usuario (punto 64)
 se regeneró con los valores corregidos (silencios incluidos) antes de
 reenviarlo.
+
+## 66. El último tiempo de cada sistema/paso nunca llegaba a pintarse (se "comía" un tiempo en cada compás con silencios)
+
+**Reporte del usuario:** tras el punto 65, avisó que en el último compás
+(el que tiene silencios) la barra "solo lee un silencio... debería
+desplazarse tres veces y solo lo hace dos, salta del segundo tiempo al
+primero del siguiente compás". Se ofreció a grabar un video y lo mandó.
+
+**Diagnóstico con el video:** en vez de mirar el video a ojo (la barra se
+mueve en fracciones de segundo), se extrajeron ~560 cuadros a 10 cuadros
+por segundo (`ffmpeg`) y se escribió un script en Python que detecta la
+posición X exacta de la barra dorada en cada cuadro (buscando el color
+`#c9a24b` con su transparencia) — un gráfico de posición contra tiempo,
+no una impresión visual. Comparando los saltos detectados contra los
+valores reales calculados del XML, los primeros 3 compases (normales)
+coincidían perfecto (9 transiciones de 9), pero el último compás (con
+silencios) solo mostraba 1 transición donde deberían haber 2 — la
+posición final (`ritmo[3][2]`, el último tiempo) nunca aparecía en
+ningún cuadro grabado.
+
+**Causa raíz:** al llegar al último tiempo de un sistema/paso,
+`updateCursorPosition()` posiciona la barra en esa última posición Y, en
+el mismo tick de JavaScript (sin ceder el control al navegador para
+pintar), el chequeo de fin de sistema dispara inmediatamente el cambio
+(`systemIndex=1` + `updateSystemVisuals()`, o `goTo(index+1)`), que
+vuelve a escribir la posición de la barra — esta vez al INICIO del
+sistema/paso nuevo. Como los dos cambios de `cursor.style.left` ocurren
+antes de que el navegador tenga la oportunidad de pintar el primero, la
+última posición del sistema viejo nunca se ve — no es un problema de
+cálculo (el valor correcto se escribe un instante), es un problema de
+que se pisa a sí mismo antes de pintarse.
+
+**Decisión:** el cambio de sistema/paso (no el conteo de tiempos ni el
+sonido del metrónomo, que no se tocan) se retrasa una fracción chica del
+tiempo actual (`Math.min(150, (60000/bpm) * 0.4)` — nunca más de 150ms,
+y nunca más del 40% de la duración real de un tiempo, para no pisarse
+con el tiempo siguiente ni siquiera a 300 BPM) con `setTimeout()`. Eso le
+da al navegador la oportunidad de pintar la última posición antes de que
+se reemplace. El callback demorado revisa `phase === 'playing'` antes de
+actuar, por si el usuario pausó justo en esa ventana.
+
+**Verificado en el navegador:** con los mismos datos reales de "Am" del
+punto 64, se registraron las 12 posiciones sucesivas del sistema de
+arriba con sondeos cada 90ms — las 12 aparecieron esta vez, incluida la
+última (`95.6598%`, coincide exacto con `ritmoArriba[3][2]`), sostenida
+~100ms antes de saltar al sistema de abajo. Se repitió hasta el final del
+paso (sin más pasos configurados) y terminó correctamente en la pantalla
+de calificación, sin quedar colgado. Ejercicio e imagen de prueba
+borrados de `localStorage` al terminar.
