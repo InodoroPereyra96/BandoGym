@@ -1489,6 +1489,14 @@ body.is-player .app-shell {
   z-index: 60;
   max-width: 90%;
   text-align: center;
+  /* Ver DECISIONES.md punto 63: el elemento #toast queda para siempre en
+     el DOM después del primer mensaje (ui.js solo saca/pone la clase
+     `.show`, nunca lo borra) — sin esto, aunque esté invisible
+     (opacity:0) sigue recibiendo clics como una franja fija cerca del
+     borde inferior de toda la pantalla, tapando cualquier botón real que
+     caiga ahí (ej. "Guardar ejercicio" en un formulario largo). Es
+     puramente informativo, nunca necesita recibir clics. */
+  pointer-events: none;
 }
 
 .toast.show {

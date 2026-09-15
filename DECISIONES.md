@@ -2912,3 +2912,51 @@ de la imagen (no se recortó ni editó ningún archivo de imagen).
 mostrado en el reproductor — el margen alrededor de la partitura ya no se
 distingue del blanco de la hoja. Ejercicio e imagen de prueba borrados de
 `localStorage` al terminar.
+
+## 63. Bug real: el toast invisible bloqueaba clics en botones que caían en su misma franja de pantalla
+
+**Reporte del usuario:** "el botón de guardar ejercicio no funciona" — al
+tocarlo aparecía el cursor de selección de texto (I-beam) en vez de la
+mano/flecha, y el click no hacía nada. Pasaba específicamente después de
+tocar "Generar 12 pasos" y agregar una foto a un paso — antes de ese
+procedimiento, guardar funcionaba bien.
+
+**Causa raíz:** `toast()` (ui.js) crea el `<div id="toast">` una sola vez
+(la primera vez que se llama) y lo deja para siempre en `document.body`;
+después solo agrega/saca la clase `.show` para mostrarlo/ocultarlo — nunca
+lo borra del DOM. La regla `.toast` (sin `.show`) lo pone en `opacity: 0`
+pero NO en `display: none` ni `pointer-events: none`, así que aunque sea
+invisible sigue siendo un elemento `position: fixed` real, centrado,
+`max-width: 90%`, a una altura fija cerca del borde inferior de TODA la
+pantalla — y sigue recibiendo clics normalmente (un elemento con
+`opacity: 0` no deja de recibir eventos de mouse/touch a menos que se le
+ponga `pointer-events: none` explícito). El botón "Generar 12 pasos"
+dispara un toast ("Se generaron 12 pasos..."), que crea ese div oculto
+pero clickeable por primera vez en la sesión del formulario. Con 12 pasos
++ una foto el formulario se vuelve mucho más alto, y el botón "Guardar
+ejercicio" termina cayendo, tras hacer scroll, justo en esa misma franja
+fija de la pantalla donde vive el toast invisible — sus clics quedan
+"atrapados" por el div de arriba en vez de llegar al botón real de abajo.
+
+**Por qué costó encontrarlo:** los intentos de reproducirlo llamando
+`.click()` por script no lo mostraban — `.click()` invoca el manejador de
+eventos del elemento directo, sin hacer el "hit test" real de qué
+elemento está encima en esa posición de pantalla, así que no expone este
+tipo de bug de superposición. Hizo falta reproducir la secuencia exacta
+que describió el usuario (generar los 12 pasos, subir una foto real,
+récien ahí mirar qué elemento devuelve `document.elementFromPoint()` en
+las coordenadas del botón) para verlo: devolvía `div#toast`, no el botón.
+
+**Decisión:** `.toast` pasa a tener `pointer-events: none` siempre (no
+solo cuando está oculto) — es un elemento puramente informativo, nunca
+necesita recibir clics, así que no hay ningún caso en que convenga que
+intercepte eventos.
+
+**Verificado en el navegador:** se reprodujo la secuencia exacta (tipo
+Arpegio, nombre "Arpegios menores", Generar 12 pasos, foto real en el
+primer paso) y se confirmó con `document.elementFromPoint()` en las
+coordenadas del botón: antes del fix devolvía `div#toast`; después,
+`button#submitBtn`. Con un click real (no `.click()` por script) sobre el
+botón, el ejercicio se guardó correctamente y apareció en Bandoteca con
+sus 12 pasos. Ejercicios de prueba borrados de `localStorage` al
+terminar.
