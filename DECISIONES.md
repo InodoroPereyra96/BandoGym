@@ -2960,3 +2960,76 @@ coordenadas del botón: antes del fix devolvía `div#toast`; después,
 botón, el ejercicio se guardó correctamente y apareció en Bandoteca con
 sus 12 pasos. Ejercicios de prueba borrados de `localStorage` al
 terminar.
+
+## 64. Precisión nota por nota usando el MusicXML original (no solo detección de compás por imagen)
+
+**Pedido:** el usuario preguntó cómo resuelven este problema otras apps de
+partituras, y si serviría de algo pasarme el archivo MusicXML del
+ejercicio (en vez de solo el PDF/imagen).
+
+**Hallazgo:** el MusicXML que exporta su Sibelius no es solo notas — trae
+datos de layout reales: cada compás declara su ancho exacto
+(`<measure width="...">`, en "tenths", la unidad de Sibelius) y cada nota
+individual trae su posición horizontal exacta (`default-x`) además de
+tono, duración y hasta el número de dedo (como `<direction><words>`).
+Como el PDF se generó del mismo archivo de Sibelius, esas coordenadas se
+pueden convertir a píxeles del PDF rasterizado con una simple regla de
+tres (usando `<scaling>`: cuántos "tenths" equivalen a cuántos mm de
+página) — sin ninguna detección de imagen de por medio.
+
+**Validación antes de construir nada:** se parseó el XML y se comparó
+contra la detección de barras de compás por píxeles ya existente (punto
+59): la cantidad de compases por sistema coincidió exacto en los 24
+sistemas (Am 4+4, Bbm 3+3, etc.), y las posiciones convertidas a píxeles
+cayeron a menos del 1% de diferencia de las detectadas por imagen —
+confirma que ambos métodos miden lo mismo, y que el XML es más confiable
+(no depende de que el contenido visual tenga o no ruido para el
+detector).
+
+**Decisión:** se generó, para cada paso, la posición exacta de CADA
+TIEMPO (no solo de cada compás) dentro de cada sistema — cruzando el XML
+(qué nota cae en el onset de cada tiempo, buscando por duración
+acumulada) con el recorte real de la imagen (mismo cálculo de caja de
+recorte que usa `auto_crop_partitura.py`, para expresar la posición como
+fracción 0..1 del ancho final ya recortado). Nuevos campos opcionales por
+paso: `compasesAbajo` (compas 3/4 se hereda entre sistemas—ver nota de
+bug abajo). `paso.ritmoArriba` / `paso.ritmoAbajo`: arrays de compases,
+cada uno con la fracción X de cada tiempo real.
+
+En `player.js`, `updateCursorPosition()` ahora tiene 3 niveles de
+precisión, cada uno cae al anterior si falta el dato: (1) `ritmoArriba`/
+`ritmoAbajo` del paso (exacto, viene del XML) → (2) segmentos por compás
+detectados en la imagen (punto 59) → (3) reparto parejo de todo el
+sistema (punto 58, el original). Un paso sin XML de origen (la inmensa
+mayoría) simplemente no tiene `ritmoArriba`/`ritmoAbajo` y sigue
+funcionando con el nivel 2 o 3 como hasta ahora — cero impacto en datos
+existentes.
+
+**Bug propio encontrado al construir esto:** el script de conversión
+(`build_rhythm_map.py`, fuera del repo) tenía un default de "4 tiempos
+por compás" cuando un sistema no redeclaraba `<time>` explícito — pero
+MusicXML solo declara el compás la primera vez y se espera que se herede
+para el resto de la partitura (acá es 3/4 en las 25 medidas, declarado
+una sola vez). Se corrigió arrastrando el último compás conocido en vez
+de resetear por sistema. Detectado ANTES de tocar la app (revisando los
+datos generados), no llegó a afectar al reproductor real.
+
+**Alcance de esta primera integración:** el usuario confirmó que puede
+exportar MusicXML junto con el PDF siempre que haga falta (usa Sibelius
+para todo) — así que este va a ser el flujo estándar de acá en más para
+sus ejercicios de arpegio, no un caso puntual. Queda pendiente aplicar
+esto al ejercicio real ya cargado del usuario (vía el mismo mecanismo de
+edición de backup ya usado en los puntos 56/57) y decidir si conviene
+incorporar la generación de `ritmoArriba`/`ritmoAbajo` directamente al
+script `auto_crop_partitura.py` cuando el usuario provea also el XML,
+en vez de ser un script aparte.
+
+**Verificado en el navegador:** paso de prueba con la imagen real de "Am"
+y los datos de ritmo calculados del XML, reproducido a 60 BPM (compás
+3/4) en modo automático. Se registraron 11 posiciones de la barra en
+distintos tiempos (incluyendo el salto de sistema arriba→abajo) y las 11
+coincidieron EXACTO con los valores calculados del XML (ej. al tiempo 2
+del compás 2, la barra salta a 43.2574%, coincidiendo con el valor
+`0.43257364910990925` calculado — no una aproximación). Sin errores de
+consola. Ejercicio e imagen de prueba borrados de `localStorage` al
+terminar.

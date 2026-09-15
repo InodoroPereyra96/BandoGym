@@ -794,17 +794,31 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
     if (!cursor || !cursor.classList.contains('active')) return;
     const total = beatsPerSistema();
     const fallbackFrac = total > 0 ? Math.min(1, beatsElapsedInSistema / total) : 0;
-
-    const systems = systemLayout && systemLayout.systems;
-    const clampedIndex = systems ? Math.min(systemIndex, systems.length - 1) : -1;
-    const segments = systems && systems[clampedIndex] ? systems[clampedIndex].segmentsFrac : null;
     const compasIndex = Math.floor(beatsElapsedInSistema / tiempos);
     const beatInCompas = beatsElapsedInSistema % tiempos;
-
     let frac = fallbackFrac;
-    if (segments && segments.length > compasIndex) {
-      const [segStart, segEnd] = segments[compasIndex];
-      frac = segStart + (segEnd - segStart) * (beatInCompas / tiempos);
+
+    // Ver DECISIONES.md punto 64: si el paso trae `ritmoArriba`/`ritmoAbajo`
+    // (posición real de cada tiempo, extraída del MusicXML original — no
+    // de la imagen) se usa esa posición exacta en vez de repartir parejo
+    // dentro del compás. Es opcional por paso: sin esos datos (la inmensa
+    // mayoría de los pasos existentes, que no tienen un MusicXML de
+    // origen) se cae al reparto por compás detectado en la imagen (punto
+    // 59), y si tampoco hay eso, al reparto parejo de todo el sistema
+    // (punto 58) — tres niveles, cada uno más preciso que el anterior,
+    // ninguno rompe si falta el dato de arriba.
+    const paso = pasos[index];
+    const ritmo = systemIndex === 0 ? paso.ritmoArriba : paso.ritmoAbajo;
+    if (ritmo && ritmo[compasIndex] && ritmo[compasIndex][beatInCompas] != null) {
+      frac = ritmo[compasIndex][beatInCompas];
+    } else {
+      const systems = systemLayout && systemLayout.systems;
+      const clampedIndex = systems ? Math.min(systemIndex, systems.length - 1) : -1;
+      const segments = systems && systems[clampedIndex] ? systems[clampedIndex].segmentsFrac : null;
+      if (segments && segments.length > compasIndex) {
+        const [segStart, segEnd] = segments[compasIndex];
+        frac = segStart + (segEnd - segStart) * (beatInCompas / tiempos);
+      }
     }
     cursor.style.left = `${frac * 100}%`;
   }
