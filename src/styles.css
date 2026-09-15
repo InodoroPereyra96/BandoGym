@@ -657,7 +657,7 @@ input, select, textarea {
    cada imagen para llenar el marco lo más posible), un alto FIJO no
    reintroduce franjas grandes: `height` en vez de `max-height`. */
 .score-frame {
-  background: #f3ecdf;
+  background: #fff;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   overflow: hidden;
@@ -688,7 +688,7 @@ input, select, textarea {
   max-width: 100%;
   max-height: 60vh;
   object-fit: contain;
-  background: #f3ecdf;
+  background: #fff;
   touch-action: none; /* el pellizco/paneo lo maneja src/zoom.js */
 }
 
@@ -746,7 +746,7 @@ input, select, textarea {
 .score-frame-wrap:-webkit-full-screen {
   width: 100vw;
   height: 100vh;
-  background: #f3ecdf;
+  background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;

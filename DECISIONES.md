@@ -2879,3 +2879,36 @@ reales (no simulados a mano) — la transformación aplicada coincidió
 exactamente con un cálculo fresco hecho en el momento, en varios tamaños
 de marco distintos. Sin errores de consola. Ejercicio e imágenes de
 prueba borrados de `localStorage` al terminar.
+
+## 62. Fondo del marco de partitura: blanco en vez de crema/beige
+
+**Pedido:** el usuario mandó una captura (vista normal, no pantalla
+completa) donde se ve un margen color crema/marrón arriba y abajo del
+pentagrama cuando la imagen no llena el marco exacto, y pidió que ese
+margen sea blanco en vez de crema — y, si al recortar más ajustado
+apareciera algo del sistema de abajo sin querer, que se pudiera borrar.
+
+**Decisión:** en vez de tocar el recorte/la maximización automática (que
+ya viene de una corrección previa, ver ronda 5 punto 33, y funciona
+correctamente — no hay forma de que el contenido de un sistema ajeno
+aparezca, las imágenes ya están bien recortadas), se cambió el color de
+fondo del marco (`#f3ecdf`, usado en 3 reglas de `.score-frame` /
+`.score-inner img,svg` / `:fullscreen`) a blanco puro (`#fff`). Con eso,
+cualquier margen que quede entre la imagen y el marco (inevitable en
+mayor o menor medida con `object-fit: contain` cuando la proporción de la
+imagen no coincide exacto con la del marco disponible, que cambia según
+el dispositivo) se funde con el fondo blanco de la partitura en vez de
+notarse como una franja de otro color.
+
+**Por qué esta opción y no re-recortar:** re-recortar las imágenes para
+que su proporción coincida exacto con CADA proporción de marco posible
+(distinta por dispositivo/orientación) no es viable — siempre va a quedar
+algún margen en al menos un eje. Cambiar el color de fondo resuelve el
+síntoma (la franja se nota) de raíz, sin depender de la proporción exacta
+de ningún dispositivo puntual, y sin ningún riesgo de tocar contenido real
+de la imagen (no se recortó ni editó ningún archivo de imagen).
+
+**Verificado en el navegador:** paso real (imagen del punto 56/57)
+mostrado en el reproductor — el margen alrededor de la partitura ya no se
+distingue del blanco de la hoja. Ejercicio e imagen de prueba borrados de
+`localStorage` al terminar.
