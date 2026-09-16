@@ -3654,3 +3654,35 @@ vuelve todo a claro, confirmado `localStorage['fuelle:profile'].temaOscuro
 Práctica muestra ahora el contenedor en pastilla con la opción activa
 resaltada. El botón de zoom se ve gris claro sobre la hoja blanca. Sin
 errores de consola. Ejercicio y perfil de prueba limpiados al terminar.
+
+## 73. Bug real en el botón de bandoneón: hueco de fuelle asomando en los bordes
+
+**Reporte del usuario:** mandó dos capturas de su celu real (una en
+vertical, una del panel de Práctica) diciendo "en mi celu se ve un poco
+raro el bandoneón".
+
+**Causa:** en el punto 71, las tapas (`.icon-btn-lg::before`/`::after`)
+quedaron con un inset horizontal de 8px (`left:8px`/`right:8px`) —
+copiado sin pensarlo del inset VERTICAL (`top:8px`/`bottom:8px`, que sí
+es correcto: la tapa es más baja que el botón a propósito). Pero el
+fondo del botón entero (el patrón de fuelle plegado) ocupa el 100% del
+ancho, borde a borde — con la tapa metida 8px para adentro, quedaba una
+franja fina de ese fuelle de fondo asomando entre el borde real del
+botón y donde arrancaba la tapa, en los dos costados. Se notaba como un
+hueco/borde raro exactamente donde el usuario lo señaló.
+
+**Decisión:** las tapas pasan a `left:0`/`right:0` (a ras del borde del
+botón, sin inset horizontal) — el `overflow:hidden` del botón ya se
+encarga de redondear la esquina exterior solo, no hace falta que la tapa
+tenga su propio radio ahí tampoco. El inset vertical (8px arriba/abajo)
+se deja igual, es correcto y coincide con el archivo original.
+
+**Verificado en el navegador:** paso de prueba real, celular emulado a
+375px de ancho (mismo ancho que las capturas del usuario) en vertical —
+las tapas quedan a ras de los bordes del botón, sin ninguna franja de
+fuelle asomando. Ejercicio de prueba limpiado al terminar (en la pestaña
+de desarrollo local — de paso, se encontró y limpió un dato de prueba
+que había quedado sin querer en el `localStorage` de la pestaña de
+producción abierta en el navegador, por ejecutar un script contra la
+pestaña equivocada; no afecta a ningún otro usuario, ese almacenamiento
+es local a cada navegador).

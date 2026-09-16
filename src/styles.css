@@ -411,6 +411,14 @@ input, select, textarea {
 }
 .icon-btn-lg:active { filter: brightness(0.92); }
 
+/* Las tapas van A RAS de los bordes del botón (`left:0`/`right:0`, ver
+   DECISIONES.md punto 73 — el usuario avisó que en su celu se veía "raro":
+   con un inset horizontal ahí, se colaba una franja fina del fuelle de
+   fondo entre el borde del botón y la tapa, como un hueco sin querer. El
+   `overflow:hidden` del botón ya redondea la esquina exterior sola, no
+   hace falta que la tapa tenga su propio radio ahí. Vertical SÍ queda con
+   inset (`top`/`bottom:8px`): la tapa es más baja que el botón a
+   propósito, igual que en el archivo original. */
 .icon-btn-lg::before,
 .icon-btn-lg::after {
   content: '';
@@ -424,8 +432,8 @@ input, select, textarea {
   background-repeat: repeat-y;
   background-size: 100% 15px;
 }
-.icon-btn-lg::before { left: 8px; }
-.icon-btn-lg::after { right: 8px; }
+.icon-btn-lg::before { left: 0; }
+.icon-btn-lg::after { right: 0; }
 
 .icon-btn-lg svg {
   position: relative;
