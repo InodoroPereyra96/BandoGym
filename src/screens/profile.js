@@ -34,6 +34,10 @@ export function render(container, { navigate }) {
     <p class="subtitle">Elegí tu nivel. Esto define qué tipo de contenido aparece en tu rutina de "Hoy" — no es una escala de dificultad progresiva, son enfoques distintos.</p>
     <div id="levels"></div>
 
+    <div class="section-title">Apariencia</div>
+    <button type="button" class="chip chip-block ${profile.temaOscuro ? 'active' : ''}" id="temaOscuroToggle">🌙 Tema oscuro en toda la app</button>
+    <p class="field-hint">Práctica siempre usa tema oscuro. Con esto activado, el resto de la app (Hoy, Bandoteca, Nuevo, Comunidad, Perfil) también.</p>
+
     <div class="section-title">Tu progreso</div>
     <div class="card" id="statsCard"></div>
 
@@ -110,6 +114,14 @@ export function render(container, { navigate }) {
   }
 
   paint();
+
+  // ---------- Tema oscuro en toda la app (ver DECISIONES.md punto 72) ----------
+  container.querySelector('#temaOscuroToggle').addEventListener('click', () => {
+    const nuevo = !store.getProfile().temaOscuro;
+    store.setTemaOscuro(nuevo); // ya aplica la clase en <body> sola (ver store.applyTheme)
+    container.querySelector('#temaOscuroToggle').classList.toggle('active', nuevo);
+    toast(nuevo ? 'Tema oscuro activado en toda la app.' : 'Tema oscuro desactivado fuera de Práctica.');
+  });
 
   container.querySelector('#resetBtn').addEventListener('click', () => {
     // Ver DECISIONES.md punto 14: la clave de "hoy" se bumpeó a ":v2" junto

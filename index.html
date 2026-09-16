@@ -26,23 +26,11 @@
         <h1 id="topbarTitle" class="topbar-title">BandoGym</h1>
         <span id="topbarSpacer" class="topbar-spacer"></span>
       </div>
-      <div class="fuelle-divider" aria-hidden="true">
-        <svg viewBox="0 0 400 24" preserveAspectRatio="none">
-          <!-- El fuelle (pliegues) ocupa el centro, de x=26 a x=374 — no llega
-               a tocar los botones de los extremos (ver DECISIONES.md punto 48). -->
-          <polyline points="26,2 51,8 76,2 101,8 126,2 151,8 176,2 201,8 226,2 251,8 276,2 301,8 326,2 351,8 374,2" fill="none" stroke="var(--text-faint)" stroke-width="1.3" stroke-linecap="round" />
-          <polyline points="26,7 51,13 76,7 101,13 126,7 151,13 176,7 201,13 226,7 251,13 276,7 301,13 326,7 351,13 374,7" fill="none" stroke="var(--text-faint)" stroke-width="1.3" stroke-linecap="round" />
-          <polyline points="26,12 51,18 76,12 101,18 126,12 151,18 176,12 201,18 226,12 251,18 276,12 301,18 326,12 351,18 374,12" fill="none" stroke="var(--text-faint)" stroke-width="1.3" stroke-linecap="round" />
-          <polyline points="26,17 51,23 76,17 101,23 126,17 151,23 176,17 201,23 226,17 251,23 276,17 301,23 326,17 351,23 374,17" fill="none" stroke="var(--text-faint)" stroke-width="1.3" stroke-linecap="round" />
-          <!-- Botones del bandoneón: 3 puntitos verticales en cada extremo, afuera del fuelle -->
-          <circle cx="9" cy="5" r="1.7" fill="var(--gold)" />
-          <circle cx="9" cy="12" r="1.7" fill="var(--gold)" />
-          <circle cx="9" cy="19" r="1.7" fill="var(--gold)" />
-          <circle cx="391" cy="5" r="1.7" fill="var(--gold)" />
-          <circle cx="391" cy="12" r="1.7" fill="var(--gold)" />
-          <circle cx="391" cy="19" r="1.7" fill="var(--gold)" />
-        </svg>
-      </div>
+      <!-- Bandoneón en miniatura como raya separadora (ver DECISIONES.md
+           punto 71): dos tapas + cuerpo plegado, todo en CSS puro (ver
+           `.fuelle-divider` en styles.css) — reemplaza al SVG de líneas
+           onduladas anterior. -->
+      <div class="fuelle-divider" aria-hidden="true"><span></span></div>
     </header>
 
     <main id="screen" class="screen" tabindex="-1"></main>

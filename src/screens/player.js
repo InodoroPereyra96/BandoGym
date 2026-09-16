@@ -351,6 +351,8 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
           </div>
         </div>
 
+        <div class="fuelle-divider" aria-hidden="true"><span></span></div>
+
         <div id="autoProgressBlock">
           <div class="progress-label" id="progressLabel"></div>
           <div class="progress-segments" id="progressSegments"></div>

@@ -61,7 +61,7 @@ const SEED_EXERCISES = buildSeedExercises(); // ver DECISIONES.md punto 16: siem
 // ---------- Perfil ----------
 
 export function getProfile() {
-  return readJSON(KEYS.profile, { nivel: 'intermedio', instagram: '' });
+  return readJSON(KEYS.profile, { nivel: 'intermedio', instagram: '', temaOscuro: false });
 }
 
 export function setNivel(nivel) {
@@ -77,6 +77,31 @@ export function setInstagram(handle) {
   const profile = getProfile();
   profile.instagram = (handle || '').trim();
   writeJSON(KEYS.profile, profile);
+}
+
+// ---------- Tema oscuro en toda la app (ver DECISIONES.md punto 72) ----------
+// Por defecto solo Práctica es oscura (ver punto 70, `body.is-player`); esta
+// preferencia extiende el mismo tema oscuro al resto de las pantallas
+// también, agregando/sacando la clase `tema-oscuro-global` en <body> (ver
+// `applyTheme`, la misma clase que en `styles.css` dispara la redefinición
+// de variables ya usada por `body.is-player`).
+export function setTemaOscuro(value) {
+  const profile = getProfile();
+  profile.temaOscuro = !!value;
+  writeJSON(KEYS.profile, profile);
+  applyTheme();
+}
+
+/**
+ * Refleja la preferencia guardada en el DOM — hay que llamarla al arrancar
+ * la app (una vez) y cada vez que cambia (ver `setTemaOscuro`, que ya la
+ * llama sola). No hace falta llamarla en cada navegación: a diferencia de
+ * `body.is-player` (que `player.js` agrega/saca al entrar/salir de esa
+ * pantalla puntual), esta clase es una preferencia estable que no cambia
+ * sola entre pantallas.
+ */
+export function applyTheme() {
+  document.body.classList.toggle('tema-oscuro-global', !!getProfile().temaOscuro);
 }
 
 // ---------- Tiempo total en la app (ver DECISIONES.md punto 69) ----------

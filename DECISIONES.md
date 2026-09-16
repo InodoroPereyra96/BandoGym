@@ -3481,14 +3481,10 @@ veces, como separador Y como indicador de progreso.
 de play/pausa (`.icon-btn-lg`) pasa de `--gold` a `--wine` (coral): en el
 tema nuevo el play es explícitamente un botón de ACCIÓN, no un estado de
 progreso — coincide con el criterio que ya usaban el botón "Volver" y el
-de anotar flotantes, que siempre fueron `--wine`. No se replicó la forma
-literal de "bandoneón con tapas a los costados" del archivo de
-referencia (`bg-bandoneon`): el HTML de `playBtn` es un único `<button>`
-sin contenedor propio para las "tapas" a izquierda/derecha sin agregar
-markup nuevo a `player.js` — se priorizó no tocar la estructura por sobre
-la réplica pixel-perfect de ese motivo puntual. El resaltado de "Modo de
-avance"/`.chip.active` y las barras de progreso sí llevan el motivo real
-del fuelle (ver arriba).
+de anotar flotantes, que siempre fueron `--wine`. **Nota: en esta primera
+pasada no se replicó la forma literal de "bandoneón con tapas a los
+costados" del archivo de referencia (`bg-bandoneon`) — ver la corrección
+en el punto 71, el usuario lo señaló como faltante y se agregó después.**
 
 **No se agregó "racha semanal":** la referencia (`referencia.html`)
 muestra un indicador de racha de 7 días en "Hoy" (`bg-racha`, "12 días")
@@ -3509,3 +3505,152 @@ como caja con número violeta y tinte al completarse. Se probó también a
 375px de ancho (mobile) sin desbordes. Ejercicio e imagen de prueba
 borrados al terminar (`store.deleteCustomExercise`), confirmado que no
 quedó nada huérfano en `localStorage`.
+
+## 71. Tres motivos del tema nuevo que faltaban: bandoneón como separador, botón de play con forma de bandoneón, zócalo sin rayas
+
+**Pedido del usuario:** tras el punto 70, avisó que faltaban piezas del
+diseño ("fijate más a fondo"): el botón de play tenía "un pequeño
+bandoneón dibujado" (diseñado en Claude Design junto con el resto del
+tema), el zócalo "no tiene motivo de rayas" (el mío seguía con las líneas
+onduladas de la estética vieja), y en "Hoy" había "un pequeño
+bandoneoncito a modo de línea separadora". Volví a leer
+`bandogym-tema.css`/`referencia.html` con más cuidado y confirmé los tres
+— los había pasado por alto en la primera pasada del punto 70.
+
+**1) Separador "fuelle" — bandoneón en miniatura, no líneas onduladas:**
+`.fuelle-divider` (el separador bajo el título de cada pantalla, punto 45/
+47) tenía código VIEJO: un SVG inline de 4 polylines onduladas + 6
+puntitos — nunca se había tocado en el punto 70. Se reemplazó por el
+motivo real del tema (`.bg-fuelle` del archivo original): dos "tapas"
+(remates redondeados, ahora pseudo-elementos `::before`/`::after` del
+propio div) a los costados, y el cuerpo plegado en el medio (un `<span>`
+real adentro, con `repeating-linear-gradient` imitando los pliegues) —
+un bandoneón de juguete como raya separadora, tal cual pedía el usuario.
+`index.html` pasa de un `<svg>` de ~15 líneas a
+`<div class="fuelle-divider"><span></span></div>`. Colores nuevos
+`--tapa`/`--fuelle-a/b/c` (con su propia redefinición en `body.is-player`,
+igual que el resto de la paleta — en oscuro NO se mezcla con blanco como
+en claro, usa los mismos tonos violeta-negro fijos que trae el archivo
+original para su propio `.bg-app--oscuro .bg-fuelle`).
+
+**2) Ese mismo separador, agregado también en el panel de Práctica:** la
+referencia lo usa DOS veces — bajo el título de cada pantalla (ya
+existía) Y entre el picker de modo y el nombre del paso, en el panel
+lateral de Práctica (`referencia.html`, entre `bg-grupo--encajado` y
+`bg-paso`). Esa segunda instancia no existía en absoluto — se agregó un
+`<div class="fuelle-divider"><span></span></div>` más en `player.js`. Se
+oculta en horizontal junto con el de arriba (mismo `body.is-player
+.fuelle-divider { display:none }` de antes, que ahora sin querer también
+tapaba esta instancia nueva — revisado, es el comportamiento correcto:
+el layout horizontal ya está al límite de espacio vertical, ver ronda 6
+punto 35, así que sacar un elemento puramente decorativo ahí tiene
+sentido para las dos instancias).
+
+**3) Botón de play con forma real de bandoneón — corrige el punto 70:**
+el punto 70 había decidido NO replicar `bg-bandoneon` (dos tapas + fuelle
++ círculo de play) "para no agregar markup nuevo a `player.js`". Repensado
+con más cuidado: se puede lograr con CSS puro sobre el `<button>` que YA
+existe (`.icon-btn.icon-btn-lg`), sin tocar una línea de `player.js`:
+- Las dos tapas son `::before`/`::after` del botón (posición absoluta a
+  cada borde), con un patrón de puntos (botonera) vía
+  `radial-gradient(...) + background-repeat:repeat-y`, coloreadas con
+  las mismas variables `--tapa`/`--text-faint` de arriba.
+- El fondo del botón entero es el mismo `repeating-linear-gradient` del
+  fuelle plegado (`--fuelle-a/b/c`) — como este botón SOLO existe dentro
+  de Práctica (`body.is-player`, siempre oscuro), no hace falta una
+  versión clara: los valores oscuros de esas variables alcanzan.
+- El círculo de play/pausa se logra estilando directamente el `<svg>`
+  del ícono (el único hijo real del botón: `${ICON_PLAY}`/`${ICON_PAUSE}`
+  ya generado por `player.js`) — `background:var(--wine)` +
+  `border-radius:50%` + `padding` + `box-shadow` de anillo, en vez de un
+  círculo separado con markup propio.
+- El botón pasa de circular fijo (72px) a `flex:1` dentro de `.transport`
+  (así ocupa el ancho disponible entre ⏮/⏭, como `bg-bandoneon` en la
+  referencia) con `height:104px` fijo en vertical.
+- En horizontal (ronda 6, punto 35): el override de `clamp()` que antes
+  fijaba ancho+alto a un cuadrado chico se cambió para clampear SOLO el
+  alto (el ancho sigue en `flex:1`) — si no, el botón hubiera vuelto a
+  ser un círculo chico en vez de mantener la forma rectangular ancha del
+  bandoneón también en horizontal. El ícono/tapas clampean en conjunto
+  con el mismo criterio (`vh`) que el resto de esa pantalla.
+
+**4) Zócalo sin motivo de rayas:** `.tabbar` todavía tenía el
+`background-image` de líneas onduladas en `rgba(0,0,0,...)` (ver punto
+49, de la estética "fuelle-pentagrama" original) — el punto 70 solo le
+había bajado la opacidad sin sacarlo. Se sacó el `background-image`
+entero: fondo liso (`var(--bg-card)`, blanco en claro / lo que ya definía
+`body.is-player` en oscuro) + el filete de 3px de acento arriba que ya
+se le había puesto en el punto 70. Coincide ahora exacto con
+`.bg-zocalo` del archivo original.
+
+**Verificado en el navegador:** las 3 correcciones confirmadas visualmente
+en "Hoy" (separador nuevo bajo el título, zócalo liso con filete violeta)
+y en "Práctica" con un paso de prueba real, en vertical Y horizontal (el
+botón de play mantiene la forma de bandoneón —tapas con puntos, fuelle
+plegado de fondo, círculo coral con anillo— y se achica proporcional sin
+desbordar ni volver a ser un círculo chico en horizontal; el segundo
+separador aparece en vertical y se oculta correctamente en horizontal
+junto con el del topbar). Sin errores de consola. Ejercicio e imagen de
+prueba borrados al terminar.
+
+## 72. Segunda pasada de auditoría: picker "encajado", botón de zoom, y toggle de tema oscuro para toda la app
+
+**Contexto:** tras el punto 71, el usuario preguntó "¿hay más botones o
+cosas que te parece que falten?", pidió una forma de activar el tema
+oscuro en toda la app desde algún lado (pensó en Perfil) y notó que el
+fondo de "Hoy" se ve "medio beige" preguntando si en el diseño era
+blanco. Repasé `bandogym-tema.css`/`referencia.html` de nuevo, componente
+por componente, y encontré dos piezas más que no coincidían.
+
+**Respuesta sobre el beige — verificado, es correcto:** `--bg: #faf7f3`
+en el archivo original (visible en `LEEME.md` y `bandogym-tema.css`) es
+exactamente eso, un crema muy sutil (no blanco puro `#ffffff`) — es el
+fondo de PANTALLA, mientras que las tarjetas/bloques que van ENCIMA
+(`--superficie`/`--bg-card`, `#ffffff`) sí son blancas — esa diferencia
+de un tono entre fondo y tarjeta es a propósito en el archivo (así las
+tarjetas blancas resaltan sobre el fondo apenas crema). Mi implementación
+ya usaba ese valor exacto — no era un bug, es fiel al archivo. No se
+tocó nada acá; si de todas formas se prefiere fondo blanco puro, es un
+cambio de una sola línea (`--bg: #ffffff` en `:root`).
+
+**1) Picker "Auto/Manual" — le faltaba el look "encajado":** la
+referencia envuelve ESE picker puntual en `bg-grupo bg-grupo--encajado`
+(un contenedor en pastilla con fondo propio, opciones transparentes
+adentro salvo la activa — como un segmented control) — el picker de
+15/30/45 min de "Hoy" NO lleva ese modificador, se queda con chips
+sueltos normales (así está en `referencia.html`, se verificó). Mi
+`#modePicker` seguía con chips sueltos como cualquier otro `.chip-row`.
+Se agregó el estilo "encajado" por `id` (`#modePicker`, no una clase
+reusable) para no afectar ningún otro picker de la app.
+
+**2) Botón de zoom/pantalla completa — color equivocado:** `.score-fs-btn`
+usaba un oscuro translúcido (`rgba(26,13,16,0.72)`), pero
+`bg-hoja__btn--zoom` en el archivo es gris claro
+(`background:var(--superficie-2); color:var(--tinta)`) — SIEMPRE, sea
+cual sea el tema de la app, porque este botón flota sobre la hoja BLANCA
+de la partitura, no sobre el fondo oscuro de Práctica. Corregido a
+colores fijos (`#efeae3`/`#191427`, no variables de tema) — mismo
+criterio que `.score-frame{background:#fff}`, que tampoco depende del
+tema por la misma razón.
+
+**3) Toggle de tema oscuro para toda la app (pedido nuevo, no un ajuste
+del tema visual):** se agregó en Perfil, sección "Apariencia" — un chip
+de ancho completo (`.chip-block`, nueva clase chica para toggles sueltos)
+que guarda `profile.temaOscuro` (`store.setTemaOscuro`) y agrega/saca la
+clase `tema-oscuro-global` en `<body>` al toque (sin esperar a navegar a
+otra pantalla). En `styles.css`, el bloque de variables oscuras que antes
+solo disparaba `body.is-player` (punto 70) ahora dispara con
+`body.is-player` **O** `body.tema-oscuro-global` — mismo bloque de
+variables, cero selectores nuevos, exactamente el mecanismo que ya se
+había dejado preparado para reusar. `store.applyTheme()` se llama una
+vez al arrancar la app (`app.js`) para reflejar la preferencia guardada
+desde el primer render.
+
+**Verificado en el navegador:** activar el toggle en Perfil oscurece esa
+misma pantalla al instante (sin recargar ni navegar) y confirmado que
+"Hoy" y "Comunidad" también aparecen oscuras al entrar; desactivado
+vuelve todo a claro, confirmado `localStorage['fuelle:profile'].temaOscuro
+=== false` y que la clase se sacó de `<body>`. El picker Auto/Manual en
+Práctica muestra ahora el contenedor en pastilla con la opción activa
+resaltada. El botón de zoom se ve gris claro sobre la hoja blanca. Sin
+errores de consola. Ejercicio y perfil de prueba limpiados al terminar.

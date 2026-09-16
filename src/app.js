@@ -81,6 +81,11 @@ function render() {
 
 backBtn.addEventListener('click', () => goBack());
 
+// Tema oscuro en toda la app (ver DECISIONES.md punto 72): preferencia
+// guardada, se aplica una sola vez al arrancar — no hace falta repetirlo en
+// cada navegación (ver comentario de `store.applyTheme`).
+store.applyTheme();
+
 window.addEventListener('hashchange', render);
 window.addEventListener('DOMContentLoaded', () => {
   if (!window.location.hash) window.location.hash = '#/hoy';

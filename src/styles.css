@@ -66,16 +66,33 @@
 
   --shadow-card: 0 2px 10px rgba(25, 20, 39, 0.08);
   --shadow-relieve: 0 4px 0 var(--text);
+
+  /* Motivo "fuelle" (ver DECISIONES.md punto 71): remate de tapa + 3 colores
+     del cuerpo plegado, usados tanto por `.fuelle-divider` (separador bajo
+     el título) como por `.icon-btn-lg` (botón de play con forma de
+     bandoneón) — un solo lugar para los 4 colores del motivo, cada uno
+     redefinido más abajo para el tema oscuro de Práctica. */
+  --tapa: var(--gold);
+  --fuelle-a: color-mix(in oklab, var(--gold) 22%, white);
+  --fuelle-b: var(--gold);
+  --fuelle-c: color-mix(in oklab, var(--gold) 12%, white);
+  --fuelle-shadow: color-mix(in oklab, var(--gold) 50%, transparent);
 }
 
-/* Tema oscuro de Práctica (ver comentario grande de arriba y DECISIONES.md
-   punto 70): redefine las MISMAS variables, así todo lo que ya usa
+/* Tema oscuro (ver comentario grande de arriba y DECISIONES.md puntos 70 y
+   72): redefine las MISMAS variables, así todo lo que ya usa
    `var(--bg)`/`var(--text)`/`var(--gold)`/etc. en el resto de la hoja pasa a
-   verse oscuro automáticamente dentro de esta pantalla, sin un solo
-   selector nuevo. `--wine`/`--wine-strong` (acción/coral) NO se redefinen
-   acá a propósito — en el tema original tampoco cambian entre claro/oscuro,
-   son el mismo color en los dos casos. */
-body.is-player {
+   verse oscuro automáticamente, sin un solo selector nuevo. Dispara con
+   CUALQUIERA de dos clases en <body>: `is-player` (Práctica, siempre
+   oscura, la pone `player.js` al entrar/salir de esa pantalla puntual — ver
+   punto 17) o `tema-oscuro-global` (preferencia opcional del usuario para
+   el resto de la app, ver `store.applyTheme`/Perfil, punto 72) — cualquiera
+   de las dos alcanza, no hace falta que estén las dos juntas.
+   `--wine`/`--wine-strong` (acción/coral) NO se redefinen acá a propósito —
+   en el tema original tampoco cambian entre claro/oscuro, son el mismo
+   color en los dos casos. */
+body.is-player,
+body.tema-oscuro-global {
   color-scheme: dark;
 
   --bg: #191427;
@@ -95,6 +112,14 @@ body.is-player {
 
   --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.35);
   --shadow-relieve: 0 4px 0 rgba(0, 0, 0, 0.4);
+
+  /* Motivo "fuelle" en oscuro: tonos fijos violeta-negro (no una mezcla con
+     blanco como en claro) — mismo criterio que el tema original. */
+  --tapa: #2a2242;
+  --fuelle-a: #2f2749;
+  --fuelle-b: var(--bg);
+  --fuelle-c: #251e3c;
+  --fuelle-shadow: rgba(255, 255, 255, 0.22);
 }
 
 * { box-sizing: border-box; }
@@ -188,18 +213,49 @@ input, select, textarea {
 
 .topbar-spacer { width: 44px; display: inline-block; }
 
-/* ---------- Separador "fuelle" (ver DECISIONES.md puntos 45 y 47) ----------
-   Reemplaza el simple borde inferior del topbar: 4 líneas plegadas como los
-   pliegues de un fuelle de bandoneón, leyéndose de paso como un pentagrama,
-   con 3 puntitos dorados en cada extremo simulando los botones del
-   instrumento. Se oculta junto con el resto del topbar en Práctica
-   horizontal (ver punto 41, `body.is-player .topbar`). */
+/* ---------- Separador "fuelle" (ver DECISIONES.md punto 71) ----------
+   REEMPLAZA el separador anterior (SVG de líneas onduladas + puntitos, ver
+   puntos 45/47) por el motivo real del tema nuevo — un bandoneón en
+   miniatura: dos "tapas" (remates redondeados, pseudo-elementos) a los
+   costados y el cuerpo plegado en el medio (el `<span>` interno, ver
+   `index.html`/`player.js`), coloreado con las variables `--tapa`/
+   `--fuelle-*` de arriba. Mismo elemento se reusa bajo el título de cada
+   pantalla (topbar) y en el panel de Práctica, entre el picker de modo y
+   el nombre del paso. Se oculta junto con el resto del topbar en Práctica
+   horizontal (ver punto 41, `body.is-player .topbar`) cuando está en el
+   topbar — la instancia del panel de Práctica no se ve afectada por esa
+   regla (vive fuera de `.topbar`). */
 .fuelle-divider {
-  height: 18px;
-  padding: 0 14px 6px;
-  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  height: 22px;
+  margin-bottom: 18px;
 }
-.fuelle-divider svg { width: 100%; height: 100%; display: block; }
+/* Inset horizontal solo en el topbar (para alinear con el padding de
+   `.topbar-inner`, ver más arriba) — la instancia del panel de Práctica no
+   lo necesita: sus hermanos (`.config-block-solo`, etc.) ya ocupan el ancho
+   completo de `.player-side` sin ningún inset propio. */
+.topbar .fuelle-divider {
+  margin-bottom: 6px;
+  padding: 0 14px;
+}
+.fuelle-divider::before,
+.fuelle-divider::after {
+  content: '';
+  width: 13px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  background: var(--tapa);
+}
+.fuelle-divider span {
+  flex: 1;
+  height: 16px;
+  margin: 0 3px;
+  background-image: repeating-linear-gradient(100deg,
+    var(--fuelle-a) 0 7px, var(--fuelle-b) 7px 9px, var(--fuelle-c) 9px 15px);
+  box-shadow: inset 0 1px 0 var(--fuelle-shadow), inset 0 -1px 0 var(--fuelle-shadow);
+}
 
 .back-btn {
   width: 44px;
@@ -214,22 +270,16 @@ input, select, textarea {
   outline: none;
 }
 
-/* El motivo de fondo va como `background-image` (no un `<div>` absoluto):
-   así pinta siempre detrás del contenido de `.tabbar` sin depender de
-   z-index/orden de pintado — ver DECISIONES.md punto 49. Trazos en negro
-   translúcido (no una variable de color: un `data:` URI no puede leer
-   `var()`) bien sutiles, para no restarle legibilidad a "Hoy"/"Bandoteca"/
-   "Nuevo"/"Perfil" por encima. */
+/* Zócalo plano (ver DECISIONES.md punto 71): el usuario señaló que el
+   tabbar seguía con el motivo de rayas onduladas de la estética anterior
+   (punto 49) — el tema nuevo lo quiere liso, con un solo filete de acento
+   arriba. Se saca el `background-image` entero, sin reemplazo. */
 .tabbar {
   position: sticky;
   bottom: 0;
   z-index: 20;
   display: flex;
-  background-color: var(--bg-elevated);
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 56' preserveAspectRatio='none'><polyline points='0,14 25,20 50,14 75,20 100,14 125,20 150,14 175,20 200,14 225,20 250,14 275,20 300,14 325,20 350,14 375,20 400,14' fill='none' stroke='rgba(0,0,0,0.12)' stroke-width='1.5' stroke-linecap='round'/><polyline points='0,28 25,34 50,28 75,34 100,28 125,34 150,28 175,34 200,28 225,34 250,28 275,34 300,28 325,34 350,28 375,34 400,28' fill='none' stroke='rgba(0,0,0,0.12)' stroke-width='1.5' stroke-linecap='round'/><polyline points='0,42 25,48 50,42 75,48 100,42 125,48 150,42 175,48 200,42 225,48 250,42 275,48 300,42 325,48 350,42 375,48 400,42' fill='none' stroke='rgba(0,0,0,0.12)' stroke-width='1.5' stroke-linecap='round'/></svg>");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 100% 100%;
+  background-color: var(--bg-card);
   border-top: 3px solid var(--gold);
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -338,20 +388,56 @@ input, select, textarea {
 
 .icon-btn:active { background: var(--bg-card-hover); }
 
-/* El botón grande de play/pausa usa el color de "acción" (--wine, coral en
-   el tema nuevo — ver DECISIONES.md punto 70), no el de "activo/progreso"
-   (--gold): mismo criterio que el botón "Volver"/anotar flotantes, que ya
-   usaban --wine desde antes. */
+/* Botón grande de play/pausa con forma de bandoneón (ver DECISIONES.md
+   punto 71 — el usuario señaló que faltaba este motivo, diseñado en
+   Claude Design junto con el resto del tema): dos "tapas" con botonera de
+   puntos en los bordes (pseudo-elementos del <button>, mismas variables
+   `--tapa`/`--fuelle-*` que `.fuelle-divider`) y el fuelle plegado de
+   fondo ocupando todo el ancho disponible de `.transport`; el ícono de
+   play/pausa en sí queda como círculo coral centrado con un anillo, sin
+   agregar ningún markup nuevo a player.js — se logra estilando
+   directamente el `<svg>` del ícono, el único hijo real del botón. */
 .icon-btn-lg {
-  width: 72px;
-  height: 72px;
-  font-size: 1.8rem;
+  position: relative;
+  flex: 1;
+  width: auto;
+  height: 104px;
+  border-radius: var(--radius);
+  border: none;
+  background-color: var(--tapa);
+  background-image: repeating-linear-gradient(100deg,
+    var(--fuelle-a) 0 8px, var(--fuelle-b) 8px 10px, var(--fuelle-c) 10px 17px);
+  overflow: hidden;
+}
+.icon-btn-lg:active { filter: brightness(0.92); }
+
+.icon-btn-lg::before,
+.icon-btn-lg::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  width: 30px;
+  border-radius: var(--radius-sm);
+  background-color: var(--tapa);
+  background-image: radial-gradient(circle 3px at 9px 11px, var(--text-faint) 99%, transparent 100%);
+  background-repeat: repeat-y;
+  background-size: 100% 15px;
+}
+.icon-btn-lg::before { left: 8px; }
+.icon-btn-lg::after { right: 8px; }
+
+.icon-btn-lg svg {
+  position: relative;
+  z-index: 1;
+  width: 26px;
+  height: 26px;
+  padding: 22px;
   border-radius: 50%;
   background: var(--wine);
-  border-color: var(--wine);
   color: #fff;
+  box-shadow: 0 0 0 5px var(--bg);
 }
-.icon-btn-lg:active { background: var(--wine-strong); }
 
 /* ---------- Tarjetas ---------- */
 
@@ -498,6 +584,15 @@ input, select, textarea {
   background: var(--gold);
   border-color: var(--gold);
   color: var(--gold-ink);
+}
+
+/* Chip de ancho completo (ver DECISIONES.md punto 72): para toggles
+   sueltos de una sola opción, ej. "Tema oscuro en toda la app" en Perfil —
+   mismo look de `.chip`/`.chip.active`, solo que ocupa toda la fila en vez
+   de convivir con otros chips al lado. */
+.chip-block {
+  width: 100%;
+  text-align: center;
 }
 
 /* Ver DECISIONES.md punto 58: toggle chico dentro de una fila de paso
@@ -874,14 +969,19 @@ input, select, textarea {
   margin-bottom: 14px;
 }
 
+/* Gris claro fijo (ver DECISIONES.md punto 72), no oscuro translúcido como
+   antes: en el tema nuevo este botón siempre flota sobre la hoja BLANCA de
+   la partitura (que a su vez es blanca sin importar el tema de la app, ver
+   `.score-frame`), así que usa colores fijos en vez de las variables de
+   tema — igual criterio que `bg-hoja__btn--zoom` en el archivo original. */
 .score-fs-btn {
   position: absolute;
   top: 8px;
   right: 8px;
   z-index: 5;
-  background: rgba(26, 13, 16, 0.72);
-  border-color: rgba(255, 255, 255, 0.25);
-  color: var(--text);
+  background: #efeae3;
+  border-color: transparent;
+  color: #191427;
   width: 44px;
   height: 44px;
   font-size: 1.1rem;
@@ -1057,6 +1157,32 @@ input, select, textarea {
 
 .config-block-solo { margin-bottom: 18px; }
 .chip-row-center { margin-bottom: 0; justify-content: center; }
+
+/* "Modo de avance" (Auto/Manual, ver DECISIONES.md punto 72): picker
+   "encajado" — contenedor en pastilla con fondo propio, opciones
+   transparentes adentro salvo la activa — mismo patrón que
+   `bg-grupo--encajado` del tema nuevo. Por `id` (no una clase reusable) a
+   propósito: para no afectar el resto de los `.chip-row` de la app (nivel/
+   tipo en Biblioteca, etc.), que se quedan con chips sueltos de siempre —
+   en la referencia, SOLO el picker de Auto/Manual usa este estilo, el de
+   15/30/45 min de "Hoy" sigue con chips normales. */
+#modePicker {
+  display: inline-flex;
+  overflow: visible;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+}
+#modePicker .chip {
+  background: transparent;
+  border-color: transparent;
+}
+#modePicker .chip.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--gold-ink);
+}
 
 /* ---------- Botones de volumen independientes (ver DECISIONES.md punto 50) ----------
    Reemplaza el panel único "⚙ Volumen" (que desplegaba los dos volúmenes
@@ -1493,7 +1619,15 @@ body.is-player .app-shell {
 
   body.is-player .transport { gap: clamp(10px, 2.8vh, 20px); }
   body.is-player .icon-btn { width: clamp(38px, 6.5vh, 56px); height: clamp(38px, 6.5vh, 56px); font-size: clamp(1rem, 2.2vh, 1.3rem); }
-  body.is-player .icon-btn-lg { width: clamp(46px, 8.5vh, 72px); height: clamp(46px, 8.5vh, 72px); font-size: clamp(1.2rem, 2.8vh, 1.8rem); }
+  /* `.icon-btn-lg` (botón de play con forma de bandoneón, ver punto 71) solo
+     clampea el ALTO en horizontal — el ancho sigue siendo `flex:1` (el resto
+     de `.transport`, ya angosto acá) para no perder la forma rectangular
+     ancha. El ícono/tapas se clampean en conjunto para que todo se achique
+     proporcional en pantallas horizontales bajas. */
+  body.is-player .icon-btn-lg { height: clamp(56px, 8.5vh, 104px); }
+  body.is-player .icon-btn-lg svg { width: clamp(16px, 3vh, 26px); height: clamp(16px, 3vh, 26px); padding: clamp(12px, 4vh, 22px); }
+  body.is-player .icon-btn-lg::before,
+  body.is-player .icon-btn-lg::after { width: clamp(20px, 5vh, 30px); }
 
   body.is-player .chip,
   body.is-player .chip-row { margin-bottom: 0; }
@@ -1555,6 +1689,9 @@ body.is-player .app-shell {
   body.is-player .topbar-inner { min-height: 0; padding: clamp(8px, 2vh, 14px); }
   body.is-player .topbar-title,
   body.is-player .topbar-spacer,
+  /* Oculta las DOS instancias de `.fuelle-divider` (topbar y panel de
+     Práctica, ver punto 71) — puramente decorativo, no vale la pena el
+     espacio vertical en un layout ya al límite (ronda 6, punto 35). */
   body.is-player .fuelle-divider { display: none; }
   body.is-player .back-btn {
     width: clamp(34px, 6.5vh, 46px);
