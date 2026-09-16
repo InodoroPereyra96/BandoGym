@@ -1,59 +1,100 @@
 /* ============================================================
    BandoGym — hoja de estilos
-   Estética: "fuelle-pentagrama" — editorial y minimalista, con el fuelle del
-   bandoneón como motivo (separador plegado, ícono de tipo, insignia de nivel
-   como disco de pesas). Tema oscuro fijo, alto contraste, tipografía grande,
-   objetivos táctiles amplios. Ver DECISIONES.md punto 45 (por qué este
-   cambio de paleta) y el punto 2, más viejo, sobre por qué el tema es oscuro
-   fijo (no auto claro/oscuro) — eso no cambió.
-   ============================================================ */
+   Estética: "gimnasio adulto" (ver DECISIONES.md punto 70) — tema PROVISTO
+   por el usuario (bandogym-tema.css/referencia.html), adaptado acá
+   reutilizando las MISMAS variables y selectores de siempre en vez de
+   reescribir cada pantalla con las clases `bg-*` del archivo original: así
+   todo el JS (que arma HTML con las clases de esta hoja) sigue funcionando
+   sin tocarlo. Reemplaza la estética "fuelle-pentagrama" anterior (editorial
+   oscura fija) — ver el punto 70 para el detalle de qué cambió y por qué.
+
+   Split claro/oscuro (SÍ hay uno ahora — reemplaza la decisión del punto 2,
+   "tema oscuro fijo"): claro por defecto (Hoy/Bandoteca/Nuevo/Comunidad/
+   Perfil) y oscuro solo en Práctica, reutilizando `body.is-player` — la
+   clase que YA marcaba esa pantalla para el layout horizontal (ver punto
+   17) ahora también dispara el tema oscuro completo, sin ningún cambio de
+   JS: el bloque `body.is-player` de acá abajo redefine las mismas variables
+   con los valores oscuros y el resto de la hoja las hereda tal cual. */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
   /* Superficies */
-  --bg: #151312;
-  --bg-elevated: #1b1918;
-  --bg-card: #1b1918;
-  --bg-card-hover: #232019;
-  --border: #332f2c;
-  --border-soft: #252220;
+  --bg: #faf7f3;
+  --bg-elevated: #efeae3;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f3efe9;
+  --border: #e2dcd0;
+  --border-soft: #ece7de;
 
   /* Texto */
-  --text: #efe9e1;
-  --text-dim: #a99f92;
-  --text-faint: #7a7166;
+  --text: #191427;
+  --text-dim: #4a4361;
+  --text-faint: #6b6480;
 
-  /* Acentos */
-  --gold: #c9a24b;
-  --gold-strong: #e2bc63;
-  --gold-ink: #241708;
-  --wine: #8c2f39;
-  --wine-strong: #a8394a;
-
-  /* Estados de calificación (paleta terrosa, no semáforo genérico) */
-  --rate-costo: #b5533c;
-  --rate-normal: #c9a24b;
-  --rate-bien: #5c8467;
+  /* Acentos — nombres de variable viejos (`--gold`/`--wine`, de la paleta
+     anterior), valores nuevos: `--gold` pasa a ser el "acento" violeta
+     (progreso/estado activo) y `--wine` el "acción" coral (play, botones
+     flotantes, bloque actual) del tema nuevo. Mantener los NOMBRES viejos
+     — no solo los valores — es lo que evita tener que tocar los cientos de
+     `var(--gold)`/`var(--wine)` ya repartidos por esta hoja (y el puñado en
+     JS, ver community.js). */
+  --gold: #5b3ce6;
+  --gold-strong: #4930c4;
+  --gold-ink: #ffffff;
+  --wine: #ff5e2e;
+  --wine-strong: #e64f22;
 
   /* Niveles */
   --lvl-principiante: #6f8f9c;
-  --lvl-intermedio: #c9a24b;
-  --lvl-avanzado: #c97a5a;
+  --lvl-intermedio: #5b3ce6;
+  --lvl-avanzado: #ff5e2e;
 
-  /* Tipografía: fuentes del sistema únicamente (ver DECISIONES.md punto 3 —
-     sigue vigente: la app tiene que funcionar 100% offline como PWA, y una
-     fuente de Google Fonts no la cachea el service worker al no ser del
-     mismo origen). El look "editorial" de esta paleta sale de itálica sobre
-     el mismo serif de siempre, no de una tipografía nueva. */
-  --font-serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  /* Tipografía (ver DECISIONES.md punto 70: reemplaza al punto 3 — ya no
+     "solo fuentes del sistema", el tema nuevo pide Outfit de Google Fonts
+     explícitamente). Con o sin conexión sigue andando: el `@import` de
+     arriba solo falla en pedir la tipografía, nunca rompe la carga de la
+     hoja, y la lista de fallback ya cae a system-ui. */
+  --font-serif: 'Outfit', system-ui, sans-serif;
+  --font-sans: 'Outfit', system-ui, sans-serif;
 
-  --radius: 14px;
-  --radius-sm: 8px;
+  --radius: 16px;
+  --radius-sm: 10px;
   --tap-min: 56px;
 
+  --shadow-card: 0 2px 10px rgba(25, 20, 39, 0.08);
+  --shadow-relieve: 0 4px 0 var(--text);
+}
+
+/* Tema oscuro de Práctica (ver comentario grande de arriba y DECISIONES.md
+   punto 70): redefine las MISMAS variables, así todo lo que ya usa
+   `var(--bg)`/`var(--text)`/`var(--gold)`/etc. en el resto de la hoja pasa a
+   verse oscuro automáticamente dentro de esta pantalla, sin un solo
+   selector nuevo. `--wine`/`--wine-strong` (acción/coral) NO se redefinen
+   acá a propósito — en el tema original tampoco cambian entre claro/oscuro,
+   son el mismo color en los dos casos. */
+body.is-player {
+  color-scheme: dark;
+
+  --bg: #191427;
+  --bg-elevated: #251e3c;
+  --bg-card: rgba(255, 255, 255, 0.08);
+  --bg-card-hover: rgba(255, 255, 255, 0.14);
+  --border: rgba(255, 255, 255, 0.18);
+  --border-soft: rgba(255, 255, 255, 0.1);
+
+  --text: #ffffff;
+  --text-dim: #e4e0ef;
+  --text-faint: #b5aecd;
+
+  --gold: #ffd166;
+  --gold-strong: #ffdd8f;
+  --gold-ink: #191427;
+
   --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.35);
+  --shadow-relieve: 0 4px 0 rgba(0, 0, 0, 0.4);
 }
 
 * { box-sizing: border-box; }
@@ -86,9 +127,9 @@ body {
 
 h1, h2, h3, h4 {
   font-family: var(--font-serif);
-  font-weight: 700;
+  font-weight: 800;
   margin: 0 0 0.4em 0;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.02em;
 }
 
 p { margin: 0 0 0.75em 0; }
@@ -138,9 +179,9 @@ input, select, textarea {
 
 .topbar-title {
   font-size: 1.15rem;
-  font-style: italic;
+  font-weight: 800;
   margin: 0;
-  color: var(--gold-strong);
+  color: var(--text);
   flex: 1;
   text-align: center;
 }
@@ -185,11 +226,11 @@ input, select, textarea {
   z-index: 20;
   display: flex;
   background-color: var(--bg-elevated);
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 56' preserveAspectRatio='none'><polyline points='0,14 25,20 50,14 75,20 100,14 125,20 150,14 175,20 200,14 225,20 250,14 275,20 300,14 325,20 350,14 375,20 400,14' fill='none' stroke='rgba(0,0,0,0.35)' stroke-width='1.5' stroke-linecap='round'/><polyline points='0,28 25,34 50,28 75,34 100,28 125,34 150,28 175,34 200,28 225,34 250,28 275,34 300,28 325,34 350,28 375,34 400,28' fill='none' stroke='rgba(0,0,0,0.35)' stroke-width='1.5' stroke-linecap='round'/><polyline points='0,42 25,48 50,42 75,48 100,42 125,48 150,42 175,48 200,42 225,48 250,42 275,48 300,42 325,48 350,42 375,48 400,42' fill='none' stroke='rgba(0,0,0,0.35)' stroke-width='1.5' stroke-linecap='round'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 56' preserveAspectRatio='none'><polyline points='0,14 25,20 50,14 75,20 100,14 125,20 150,14 175,20 200,14 225,20 250,14 275,20 300,14 325,20 350,14 375,20 400,14' fill='none' stroke='rgba(0,0,0,0.12)' stroke-width='1.5' stroke-linecap='round'/><polyline points='0,28 25,34 50,28 75,34 100,28 125,34 150,28 175,34 200,28 225,34 250,28 275,34 300,28 325,34 350,28 375,34 400,28' fill='none' stroke='rgba(0,0,0,0.12)' stroke-width='1.5' stroke-linecap='round'/><polyline points='0,42 25,48 50,42 75,48 100,42 125,48 150,42 175,48 200,42 225,48 250,42 275,48 300,42 325,48 350,42 375,48 400,42' fill='none' stroke='rgba(0,0,0,0.12)' stroke-width='1.5' stroke-linecap='round'/></svg>");
   background-repeat: no-repeat;
   background-position: center;
   background-size: 100% 100%;
-  border-top: 1px solid var(--border-soft);
+  border-top: 3px solid var(--gold);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -297,15 +338,20 @@ input, select, textarea {
 
 .icon-btn:active { background: var(--bg-card-hover); }
 
+/* El botón grande de play/pausa usa el color de "acción" (--wine, coral en
+   el tema nuevo — ver DECISIONES.md punto 70), no el de "activo/progreso"
+   (--gold): mismo criterio que el botón "Volver"/anotar flotantes, que ya
+   usaban --wine desde antes. */
 .icon-btn-lg {
   width: 72px;
   height: 72px;
   font-size: 1.8rem;
   border-radius: 50%;
-  background: var(--gold);
-  border-color: var(--gold);
-  color: var(--gold-ink);
+  background: var(--wine);
+  border-color: var(--wine);
+  color: #fff;
 }
+.icon-btn-lg:active { background: var(--wine-strong); }
 
 /* ---------- Tarjetas ---------- */
 
@@ -346,23 +392,17 @@ input, select, textarea {
   font-size: 1.05rem;
 }
 
-/* ---------- Biblioteca y "Hoy" como lista, no tarjetas (ver DECISIONES.md punto 45) ----------
-   Estas dos pantallas listan ejercicios uno tras otro — encajan con el lado
-   minimalista de la nueva estética (filas separadas por una línea fina, sin
-   fondo/borde/sombra propios) mejor que con `.card` de caja. El resto de la
-   app (Perfil, "Nuevo ejercicio") sigue usando `.card` tal cual, con los
-   colores nuevos pero la misma estructura de siempre — ver ese punto para
-   por qué solo estas dos pantallas cambian de forma. */
-#list, #stepsList { border-top: 1px solid var(--border-soft); }
-.card-list-item,
-.step-card {
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-  border-bottom: 1px solid var(--border-soft);
-  margin-bottom: 0;
-}
+/* ---------- Biblioteca y "Hoy" como bloques con caja (ver DECISIONES.md punto 70) ----------
+   El tema nuevo (provisto por el usuario) arma la rutina de "Hoy" como
+   bloques redondeados con fondo propio ("bg-bloque") — esto REEMPLAZA la
+   decisión del punto 45 (lista plana, filas separadas por una línea fina,
+   sin caja), que era parte de la estética "editorial" anterior y ya no
+   aplica. `.card-list-item`/`.step-card` vuelven a heredar el look de
+   `.card` sin overrides (fondo, borde, radio, sombra) — alcanza con sacar
+   el bloque de reglas que los aplanaba, no hace falta reescribir nada más.
+   Los completados (`.step-card.done`) se tiñen apenas con el acento (ver
+   más abajo) en vez de solo tachar el título, para que se note el bloque
+   entero como "hecho" de un vistazo. */
 
 .card-row {
   display: flex;
@@ -581,9 +621,9 @@ input, select, textarea {
 }
 
 .time-chip.active {
-  background: var(--wine);
-  border-color: var(--wine);
-  color: #f9ece9;
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--gold-ink);
 }
 
 .step-card {
@@ -597,14 +637,21 @@ input, select, textarea {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  border: 2px solid var(--gold);
-  color: var(--gold-strong);
+  background: color-mix(in oklab, var(--gold) 16%, var(--bg-card));
+  color: var(--gold);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 800;
   font-family: var(--font-serif);
   flex-shrink: 0;
+}
+
+/* Bloque completado: se tiñe entero apenas con el acento (ver DECISIONES.md
+   punto 70), no solo el número — de un vistazo se distingue qué ya se hizo
+   sin tener que leer el tachado del título. */
+.step-card.done {
+  background: color-mix(in oklab, var(--gold) 8%, var(--bg-card));
 }
 
 .step-card.done .step-index {
@@ -944,18 +991,23 @@ input, select, textarea {
 }
 .progress-label.countin { color: var(--gold-strong); }
 
+/* Pliegues de fuelle en vez de barritas parejas (ver DECISIONES.md punto
+   70): cada segmento se INCLINA alternado, como los pliegues reales del
+   instrumento — mismo motivo que ya usa `.fuelle-divider` en el topbar,
+   ahora también como indicador de progreso. */
 .progress-segments {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   margin-bottom: 18px;
 }
 .progress-segment {
   flex: 1;
-  height: 8px;
-  border-radius: 999px;
+  height: 12px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-soft);
+  transform: skewX(-14deg);
 }
+.progress-segment:nth-child(even) { transform: skewX(14deg); }
 .progress-segment.filled {
   background: var(--gold);
   border-color: var(--gold);
@@ -1030,8 +1082,9 @@ input, select, textarea {
 #metroVolBlock, #demoVolBlock { margin-bottom: 14px; }
 
 /* ---------- Botones de pie de reproductor lado a lado (ver DECISIONES.md ronda 6, punto 35) ----------
-   "Cargar foto" y "Terminar y calificar" van apilados en vertical (igual que
-   antes) pero lado a lado en horizontal, para ahorrar una fila más. */
+   "Cargar foto" y "Terminar" (antes "Terminar y calificar", ver punto 68)
+   van apilados en vertical (igual que antes) pero lado a lado en
+   horizontal, para ahorrar una fila más. */
 
 .footer-row {
   display: flex;
@@ -1250,26 +1303,6 @@ input[type="range"]::-moz-range-thumb {
   text-align: center;
   margin-bottom: 18px;
 }
-
-.rating-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.rating-btn {
-  min-height: 64px;
-  border-radius: var(--radius);
-  border: none;
-  font-size: 1.1rem;
-  font-weight: 700;
-  cursor: pointer;
-  color: #1c0e0e;
-}
-
-.rating-btn.costo { background: var(--rate-costo); color: #2a0f08; }
-.rating-btn.normal { background: var(--rate-normal); color: #241708; }
-.rating-btn.bien { background: var(--rate-bien); color: #0f2015; }
 
 /* ---------- Diálogo de confirmación genérico (ver DECISIONES.md ronda 7, punto 37) ---------- */
 /* Reusa `.rating-overlay`/`.rating-sheet` (mismo overlay + hoja inferior). */
@@ -1552,6 +1585,7 @@ body.is-player .app-shell {
 .level-card.selected {
   border-color: var(--gold);
   background: var(--bg-card-hover);
+  box-shadow: var(--shadow-relieve);
 }
 
 .level-card h3 {
@@ -1602,6 +1636,109 @@ body.is-player .app-shell {
 .toast.show {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+}
+
+/* ---------- Comunidad (ver DECISIONES.md punto 69) ----------
+   Vista previa con "usuarios de fantasía": mismo lenguaje visual que el
+   resto de la app (banner tipo `.backup-banner`, tarjetas, dorado/bordó). */
+
+.community-banner {
+  border-color: var(--gold);
+}
+.community-banner strong { color: var(--gold-strong); }
+.community-banner p { margin: 6px 0 0; color: var(--text-dim); font-size: 0.9rem; }
+
+.community-ig-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.community-ig-row input {
+  flex: 1;
+  min-width: 0;
+}
+.community-ig-row .btn { width: auto; }
+
+.community-ranking {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.community-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+}
+.community-row.is-you {
+  border-color: var(--gold);
+  background: var(--bg-card-hover);
+}
+
+.community-pos {
+  width: 22px;
+  flex-shrink: 0;
+  text-align: center;
+  color: var(--text-faint);
+  font-weight: 700;
+}
+
+.community-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--gold-ink);
+}
+
+/* `.community-main` agrupa nombre+tiempo en una sola línea que SÍ puede
+   angostarse (`flex:1; min-width:0`, ver DECISIONES.md punto 69) — el chip
+   de Instagram queda AFUERA de este grupo, con `flex-basis:100%` (ver más
+   abajo) para que baje a una segunda línea en vez de competir por el mismo
+   espacio y dejar el nombre invisible por achicarse a casi 0px. */
+.community-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.community-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.community-you-tag { font-weight: 400; color: var(--text-faint); font-size: 0.85em; }
+
+.community-time {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.community-ig-chip {
+  flex-basis: 100%;
+  margin-left: 46px; /* se alinea aprox. debajo del nombre (ancho de posición + avatar + gaps) */
+  color: var(--gold-strong);
+  font-size: 0.85rem;
+  padding: 3px 10px;
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+  align-self: flex-start;
 }
 
 /* ---------- Utilidades ---------- */

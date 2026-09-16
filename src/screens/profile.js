@@ -96,12 +96,15 @@ export function render(container, { navigate }) {
       });
     });
 
+    // Ver DECISIONES.md punto 68: ya no se le pregunta al usuario "cómo te
+    // salió" (se sacó la hoja de calificación), así que este resumen ya no
+    // puede distinguir "bien"/"normal"/"me costó" — solo cuántos ejercicios
+    // distintos tienen progreso registrado.
     const progress = store.getProgress();
     const total = Object.keys(progress).length;
-    const bien = Object.values(progress).filter((p) => p.rating === 'bien').length;
     container.querySelector('#statsCard').innerHTML = total === 0
-      ? '<p class="mb-0">Todavía no calificaste ningún ejercicio. ¡Arrancá por "Hoy"!</p>'
-      : `<p class="mb-0">${total} ejercicio${total === 1 ? '' : 's'} practicado${total === 1 ? '' : 's'} con calificación registrada, ${bien} marcado${bien === 1 ? '' : 's'} como "bien".</p>`;
+      ? '<p class="mb-0">Todavía no practicaste ningún ejercicio. ¡Arrancá por "Hoy"!</p>'
+      : `<p class="mb-0">${total} ejercicio${total === 1 ? '' : 's'} con progreso registrado.</p>`;
 
     paintBackupStatus();
   }

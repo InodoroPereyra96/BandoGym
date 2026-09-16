@@ -6,6 +6,8 @@ import * as library from './screens/library.js';
 import * as player from './screens/player.js';
 import * as newExercise from './screens/newExercise.js';
 import * as profile from './screens/profile.js';
+import * as community from './screens/community.js';
+import * as store from './store.js';
 
 const screenEl = document.getElementById('screen');
 const topbarTitle = document.getElementById('topbarTitle');
@@ -18,6 +20,7 @@ const ROUTES = {
   biblioteca: { mod: library, title: 'Bandoteca', tab: 'biblioteca' },
   nuevo: { mod: newExercise, title: 'Nuevo ejercicio', tab: 'nuevo' },
   editar: { mod: newExercise, title: 'Editar ejercicio', tab: null },
+  comunidad: { mod: community, title: 'Comunidad', tab: 'comunidad' },
   perfil: { mod: profile, title: 'Perfil', tab: 'perfil' },
   practicar: { mod: player, title: 'Práctica', tab: null },
 };
@@ -98,3 +101,34 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+
+// ---------------------------------------------------------------------
+// Tiempo total en la app (ver DECISIONES.md punto 69, pestaña Comunidad)
+// ---------------------------------------------------------------------
+// Se acumula mientras el documento está VISIBLE — no cuenta si la app quedó
+// minimizada, la pantalla se bloqueó, o cambiaste de pestaña (no queremos
+// medir "la dejé abierta de fondo", sino uso real). Se guarda en `store.js`
+// cada `FLUSH_INTERVAL_MS` Y al ocultarse/cerrarse, no solo al final: una
+// PWA de celular puede morir de golpe (la mata el sistema operativo) sin
+// disparar ningún evento de cierre prolijo, así que conviene ir volcando el
+// acumulado seguido en vez de arriesgarse a perderlo todo de un saque.
+const APP_TIME_FLUSH_MS = 20000;
+let appTimeSessionStart = document.visibilityState === 'visible' ? Date.now() : null;
+
+function flushAppTime() {
+  if (appTimeSessionStart == null) return;
+  const now = Date.now();
+  store.addAppTimeMs(now - appTimeSessionStart);
+  appTimeSessionStart = now;
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    flushAppTime();
+    appTimeSessionStart = null;
+  } else {
+    appTimeSessionStart = Date.now();
+  }
+});
+window.addEventListener('pagehide', flushAppTime);
+setInterval(flushAppTime, APP_TIME_FLUSH_MS);

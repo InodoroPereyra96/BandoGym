@@ -33,6 +33,12 @@ sin duplicar el diseño. Si más adelante hace falta un tema claro para uso a
 la luz del día, los tokens de color ya están centralizados en `:root` en
 `src/styles.css`, así que agregarlo es acotado.
 
+**Actualización (ver punto 70):** el usuario proveyó un tema visual nuevo
+que SÍ separa claro/oscuro por pantalla (claro en Hoy/Bandoteca/Nuevo/
+Comunidad/Perfil, oscuro solo en Práctica) — reemplaza esta decisión. Se
+mantiene la nota de acá abajo: los tokens centralizados en `:root` fueron
+justo lo que permitió hacer ese cambio sin tocar HTML/JS.
+
 ## 3. Tipografía: system fonts, no Google Fonts
 
 **Duda:** ¿Cargar una tipografía serif "de época" (ej. Google Fonts) para reforzar
@@ -45,6 +51,13 @@ la identidad tanguera?
 externas no se pueden garantizar cacheadas de forma confiable sin complejizar el
 service worker. Los stacks elegidos igual dan un aire serio/editorial en los
 títulos sin depender de red.
+
+**Actualización (ver punto 70):** el tema nuevo que proveyó el usuario pide
+explícitamente 'Outfit' de Google Fonts — reemplaza esta decisión. La app
+sigue funcionando sin conexión (el `@import` que falla no rompe la carga
+del resto de la hoja, solo cae al `system-ui` del stack de respaldo), pero
+ya no hay ninguna garantía de que la tipografía exacta se vea offline la
+primera vez.
 
 ## 4. Alcance de tonalidades en nivel avanzado
 
@@ -1848,6 +1861,13 @@ estilo de fila sin tarjeta; "Nuevo ejercicio"/"Editar"/Perfil (formularios)
 solo cambian de paleta/tipografía, sin tocar su estructura de campos/chips
 — no todo tenía sentido convertirlo a "lista".
 
+**Actualización (ver punto 70):** el tema visual nuevo que proveyó el
+usuario vuelve a mostrar Biblioteca/Hoy como bloques con caja — reemplaza
+específicamente la parte de "lista sin tarjeta" de este punto (el resto,
+paleta/tipografía/separador de fuelle/íconos, también quedó reemplazado
+por el punto 70, pero el mecanismo de "fila de ejercicio con ícono" que
+se armó acá seguía siendo válido de base).
+
 **Decisión — paleta y tipografía (`styles.css`, `:root`):**
 - Superficies/texto pasan de los tonos bordó (`#1a0d10`/`#2a161c`/...) a una
   paleta más neutra, marrón-carbón (`#151312`/`#1b1918`/`#efe9e1`/...) —
@@ -3257,3 +3277,235 @@ llamó a `store.deleteCustomExercise()` sobre el ejercicio de prueba y se
 confirmó que también borra sus anotaciones (junto con imagen y el
 ejercicio mismo) — sin dejar nada huérfano. Ejercicio, imagen y
 anotaciones de prueba quedaron completamente limpios al terminar.
+
+## 68. Se saca la calificación "me costó / normal / bien" al terminar un ejercicio
+
+**Pedido del usuario:** "quisiera sacar la opción de 'puntuar' como me
+salió el ejercicio. siento que no suma en nada a la app". Antes de tocar
+nada le expliqué que no es solo cosmético: `store.recordRating()`
+alimenta directamente la repetición espaciada de "Hoy" (rating "me
+costó" → vuelve mañana, "bien" → se espacia más). Le planteé dos
+caminos — sacar la pregunta pero seguir alimentando el algoritmo en
+silencio (asumiendo "normal" siempre), o además simplificar el algoritmo
+a pura antigüedad — y recomendé el primero. El usuario no contestó esa
+pregunta puntual (la respuesta se cruzó con la de otro tema, ver punto
+69) así que avancé con la opción recomendada, avisando explícitamente
+antes de tocar código.
+
+**Decisión:** se saca la hoja "¿Cómo te salió?" (`showRatingOverlay` en
+`player.js`) por completo. El botón "Terminar y calificar" pasa a
+llamarse simplemente "Terminar" y, al tocarlo (o al llegar
+automáticamente al último paso en modo auto), se registra el progreso
+directamente con `store.recordRating(exercise.id, 'normal')` — sin
+preguntarle nada al usuario — y navega de una a "Hoy"/Bandoteca. Un
+único punto nuevo, `finishExercise()`, reemplaza las 3 llamadas viejas a
+`showRatingOverlay` (fin manual en fuelle, fin manual en escala/arpegio,
+y fin automático al pasar del último paso).
+
+`store.recordRating()`/`nextInterval()` NO se tocan en su lógica interna
+(siguen aceptando 'costo'/'normal'/'bien' por compatibilidad con
+progreso de backups viejos) — dejan de recibir cualquier valor que no
+sea 'normal' desde ahora. El intervalo de repetición espaciada sigue
+funcionando igual que antes (crece con cada práctica), solo que ya no
+distingue dificultad.
+
+**Limpieza:** se sacaron `.rating-buttons`/`.rating-btn(.costo/.normal/
+.bien)` y las variables `--rate-costo/normal/bien` de `styles.css` (ya
+sin uso — `.rating-overlay`/`.rating-sheet` SÍ se mantienen, las reusa
+`confirmDialog()` en `ui.js` para diálogos de confirmación genéricos). En
+`profile.js`, el resumen de "Tu progreso" ya no puede mostrar cuántos
+quedaron "bien" (ya no hay ese dato), se simplificó a solo la cantidad de
+ejercicios con progreso registrado.
+
+**Verificado en el navegador:** ejercicio de prueba tipo "fuelle", se
+tocó "Terminar" y navegó derecho a Bandoteca (sin ninguna hoja
+intermedia) mostrando el toast "¡Listo! Seguí así."; se confirmó en
+`localStorage['fuelle:progress']` que quedó grabado con
+`rating: "normal"` e `intervalDays` calculado. Ejercicio y progreso de
+prueba borrados al terminar.
+
+## 69. Pestaña "Comunidad" — vista previa con usuarios de fantasía (sin backend todavía)
+
+**Contexto:** el usuario propuso una sección de comunidad para que la
+gente de su grupo de WhatsApp ("BandoComunidad", bandoneonistas)
+pudieran verse entre sí usando la app y dejar su Instagram para
+conectar. Como es un cambio de naturaleza de la app (hoy 100% cliente,
+sin backend ni cuentas — ver punto 1 y README), antes de tocar código
+hice una ronda de preguntas para entender el alcance real:
+
+- **Formato:** no una lista simple, sino un RANKING por **tiempo total
+  en la app** (no por dificultad ni cantidad de ejercicios).
+- **Acceso:** el usuario quiere login real con Google (no una clave
+  compartida ni acceso abierto sin más) — queda pendiente, ver más abajo.
+- **Alcance de esta etapa:** pedido explícito de NO conectar un backend
+  todavía — "diseñar la interfaz con dos o tres usuarios de fantasía y
+  cuando tenga más ejercicios cargados, ahí terminamos de conectar a un
+  servidor". O sea: esta ronda es una vista previa de la interfaz, no la
+  función final.
+
+**Qué se implementó ahora:**
+- Quinta pestaña "Comunidad" en el tabbar (`index.html`/`app.js`, ruta
+  `#/comunidad`) — se probó que 5 pestañas siguen entrando sin cortarse
+  ni desbordar en 375px de ancho (el celular angosto de referencia de
+  esta app, ver comentario de responsive en `styles.css`).
+- `src/screens/community.js`: un banner bien visible ("🔧 Vista previa")
+  aclarando que son datos de ejemplo todavía no conectados a un
+  servidor; un botón "Iniciar sesión con Google" que por ahora solo
+  muestra un toast explicando que no está conectado (para no simular una
+  funcionalidad que todavía no existe); un campo para cargar el
+  Instagram propio (persistido de verdad, ver abajo); y el ranking en
+  sí, mezclando 3 "usuarios de
+  fantasía" (`FANTASY_MEMBERS`, con nombres y tiempos inventados,
+  claramente marcados como tales en el código) con la fila real del
+  usuario actual ("Vos"), ordenados de mayor a menor tiempo.
+- **Tiempo en la app — esto SÍ es real, no simulado:** se agregó
+  tracking de verdad en `app.js` (`store.getAppTimeMs()`/
+  `addAppTimeMs()`), acumulando mientras el documento está VISIBLE
+  (`visibilitychange`), volcado cada 20s y también en `pagehide` — no
+  alcanza con guardar solo al cerrar prolijamente, una PWA de celular
+  puede morir de golpe por el sistema operativo sin disparar ese evento.
+  Elegí implementar esto YA (no solo la interfaz de mentira) porque es la
+  métrica real que va a hacer falta el día que se conecte un servidor de
+  verdad — no tiene sentido inventar también el dato cuando el real es
+  igual de simple de trackear.
+- **Instagram — también persistido de verdad:** `store.setInstagram()`
+  guarda el handle en el mismo perfil local (`fuelle:profile`). Como
+  lleva el prefijo `fuelle:` de siempre, ya queda incluido solo en el
+  respaldo/restauración existente (punto 37), sin tocar ese código.
+
+**Qué falta para la versión real (fuera de esta ronda, a propósito):**
+login con Google de verdad, un backend compartido (ver conversación con
+el usuario: se evaluó y aceptó sumar un servicio externo tipo Firebase
+más adelante — hoy la app no tiene ninguna dependencia externa, ver
+punto 1, así que es un cambio de arquitectura real, no una feature
+chica) que junte el tiempo-en-la-app y el Instagram de CADA usuario en
+un lugar visible para todos, y algún control de acceso (a evaluar qué
+tan abierto queda, dado que son datos personales en una URL pública sin
+login hoy).
+
+**Verificado en el navegador:** la pestaña carga sin errores de consola,
+el ranking ordena correctamente a los 3 usuarios de fantasía + "Vos" por
+tiempo descendente, guardar un Instagram lo persiste (recargando la
+página, confirmado vía `localStorage`) y lo muestra en la fila de "Vos"
+del ranking, "Iniciar sesión con Google" muestra el toast esperado sin
+romper nada, y el tabbar de 5 pestañas entra bien en 375px de ancho. Se
+encontró y corrigió en el camino un bug de layout real: el chip de
+Instagram le quitaba todo el espacio al nombre en filas angostas
+(`flex: 1` del nombre compitiendo con elementos `flex-shrink: 0`,
+llegando a un ancho casi nulo) — se separó el chip a una segunda línea
+con `flex-basis: 100%` dentro de la fila (`flex-wrap: wrap`), verificado
+visualmente que ahora nombre+tiempo quedan siempre legibles en la
+primera línea y el Instagram (si hay) debajo.
+
+## 70. Tema visual nuevo "gimnasio adulto" — provisto por el usuario, adaptado sin tocar HTML/JS
+
+**Pedido del usuario:** "este es el nuevo diseño de la app, adaptalo a lo
+que tenemos por favor", adjuntando tres archivos (`LEEME.md`,
+`bandogym-tema.css`, `referencia.html`) con un tema completo: paleta
+clara por defecto (crema `#faf7f3`, texto casi negro-violeta `#191427`,
+acento violeta `#5b3ce6` para progreso/estado activo, coral `#ff5e2e`
+para acciones/play, amarillo `#ffd166` como acento sobre fondo oscuro),
+oscuro solo para Práctica (`#191427`), tipografía Outfit (Google Fonts),
+formas más redondeadas y pastilla, y motivos del bandoneón (fuelle
+plegado, "pliegues" como barra de progreso, botón de play con forma de
+bandoneón) armados en gradientes CSS, sin imágenes.
+
+**Decisión de enfoque — remapear variables, no reescribir HTML:** el
+archivo original viene con su propio sistema de clases (`bg-app`,
+`bg-btn`, `bg-bloque`, `bg-pliegues`, `bg-bandoneon`, etc., ver
+`referencia.html`) pensado para pegarse en CUALQUIER proyecto desde cero.
+Reescribir cada pantalla (`today.js`, `player.js`, `library.js`,
+`newExercise.js`, `profile.js`, `community.js`) con esas clases nuevas
+habría sido gigantesco y de altísimo riesgo — esta app tiene MUCHO
+comportamiento fino atado a los selectores actuales (zoom/paneo del
+punto 18, cursor de práctica de los puntos 58-66, anotaciones del punto
+67, los `clamp()` de la horizontal de Práctica de la ronda 6 punto 35,
+etc.) que se habría podido romper con cada clase renombrada. En cambio:
+se tomaron los VALORES del tema nuevo (colores, tipografía, radios,
+sombra "relieve") y se cargaron en las MISMAS variables CSS que ya usaba
+toda la hoja (`--bg`, `--text`, `--gold`, `--wine`, `--radius`, etc. —
+ver `:root` en `styles.css`). Como esas variables ya estaban centralizadas
+(gracias, otra vez, al punto 2 original) y solo hay UN uso de una de ellas
+fuera de `styles.css` (`community.js`, el array `AVATAR_COLORS`), el
+remapeo alcanzó para que TODA la app cambiara de estética sin tocar un
+solo archivo de pantalla ni un solo selector existente.
+
+**`--gold`/`--wine` cambian de SIGNIFICADO, no solo de valor:** en la
+paleta vieja `--gold` era "dorado" y `--wine` "bordó", sin relación
+directa con lo que representaban. En el tema nuevo, `--gold` pasa a
+llevar el rol de "acento" (violeta — progreso/estado activo/seleccionado)
+y `--wine` el de "acción" (coral — play, Terminar, botones flotantes).
+Mantener los NOMBRES viejos con este nuevo significado fue deliberado
+(evita tocar los ~170 usos de `var(--gold)`/`var(--wine)` repartidos por
+la hoja) a costa de que el nombre de la variable ya no describe el color
+que contiene — quien toque `styles.css` de acá en más tiene que saber
+que "gold" = acento y "wine" = acción, no literalmente dorado/bordó. Se
+dejó documentado en el comentario del bloque `:root`.
+
+**Claro por defecto, oscuro solo en Práctica — reemplaza el punto 2:**
+la clase `body.is-player` YA existía (la pone `player.js` para el layout
+horizontal, punto 17) y ya envolvía exactamente la pantalla que debía
+quedar oscura. Se le agregó un bloque que redefine las mismas variables
+de superficie/texto/`--gold` con los valores oscuros del tema — el resto
+de la hoja las hereda por cascada sin un solo selector `body.is-player
+.algo` nuevo (salvo los que ya existían de antes, para el layout
+horizontal). `--wine`/`--wine-strong` NO se redefinen ahí a propósito:
+en el tema original el color de "acción" es el mismo en claro y oscuro,
+así que tampoco cambia acá.
+
+**Tipografía — reemplaza el punto 3:** se agregó el `@import` de Outfit
+(Google Fonts) pedido explícitamente por el tema nuevo, repuntando
+`--font-serif`/`--font-sans` (los nombres de variable de siempre) a
+`'Outfit', system-ui, sans-serif`. Ya no hay garantía de verse con la
+tipografía exacta la primera vez sin conexión (el service worker no
+cachea pedidos de otro origen), pero tampoco rompe nada: si el `@import`
+falla, la lista de fallback cae a `system-ui` sola.
+
+**Biblioteca/Hoy vuelven a ser bloques con caja — reemplaza parte del
+punto 45:** esas dos pantallas se habían aplanado a filas sin fondo en
+una ronda de diseño anterior; el tema nuevo las quiere de vuelta como
+bloques redondeados con caja propia (`bg-bloque`). Alcanzó con sacar el
+bloque de CSS que las aplanaba — `.card-list-item`/`.step-card` vuelven a
+heredar `.card` tal cual. Los pasos completados de "Hoy" además se tiñen
+enteros con el acento (antes solo se tachaba el título) para que se note
+de un vistazo.
+
+**Motivo "pliegues" en la barra de progreso de Práctica:** `.progress-
+segment` (un segmento por tiempo, ver punto 24) pasó de barritas parejas
+en pastilla a paralelogramos inclinados alternados (`skewX(-14deg)`/
+`skewX(14deg)` en pares), el mismo lenguaje visual que ya usaba
+`.fuelle-divider` en el topbar — ahora el motivo del fuelle aparece dos
+veces, como separador Y como indicador de progreso.
+
+**Botón de play — color de "acción", no de "acento":** el círculo grande
+de play/pausa (`.icon-btn-lg`) pasa de `--gold` a `--wine` (coral): en el
+tema nuevo el play es explícitamente un botón de ACCIÓN, no un estado de
+progreso — coincide con el criterio que ya usaban el botón "Volver" y el
+de anotar flotantes, que siempre fueron `--wine`. No se replicó la forma
+literal de "bandoneón con tapas a los costados" del archivo de
+referencia (`bg-bandoneon`): el HTML de `playBtn` es un único `<button>`
+sin contenedor propio para las "tapas" a izquierda/derecha sin agregar
+markup nuevo a `player.js` — se priorizó no tocar la estructura por sobre
+la réplica pixel-perfect de ese motivo puntual. El resaltado de "Modo de
+avance"/`.chip.active` y las barras de progreso sí llevan el motivo real
+del fuelle (ver arriba).
+
+**No se agregó "racha semanal":** la referencia (`referencia.html`)
+muestra un indicador de racha de 7 días en "Hoy" (`bg-racha`, "12 días")
+— no existe ningún dato de racha en el modelo actual (`store.js` no
+trackea días consecutivos de uso). Agregarlo de verdad es una feature de
+datos nueva, no un reskin — fuera de alcance de este pedido puntual
+("adaptalo a lo que TENEMOS"). Si se pide más adelante, es un punto
+aparte.
+
+**Verificado en el navegador:** sin errores de consola. Se recorrieron
+las 6 pantallas (Hoy, Práctica —incluido un paso con imagen de prueba
+real—, Bandoteca, Nuevo ejercicio, Comunidad, Perfil) confirmando la
+paleta clara en las primeras cinco y oscura en Práctica, tipografía
+Outfit cargada, tabbar de 5 pestañas con filete violeta/amarillo según
+pantalla, chips/botones/badges con los colores nuevos, bloque "actual"
+de nivel en Perfil con la sombra "relieve", y bloque de rutina de "Hoy"
+como caja con número violeta y tinte al completarse. Se probó también a
+375px de ancho (mobile) sin desbordes. Ejercicio e imagen de prueba
+borrados al terminar (`store.deleteCustomExercise`), confirmado que no
+quedó nada huérfano en `localStorage`.

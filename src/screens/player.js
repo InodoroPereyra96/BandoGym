@@ -12,7 +12,9 @@
 //   directo a un paso (punto 35) y, en horizontal, layout compacto sin
 //   scroll vertical con ajustes secundarios colapsables (punto 35).
 // - Ejercicios de fuelle (principiante): temporizador simple de práctica.
-// En ambos casos termina con la calificación "me costó / normal / bien".
+// En ambos casos, al terminar se registra el progreso automáticamente (sin
+// preguntarle al usuario "cómo te salió" — ver DECISIONES.md punto 68) y se
+// vuelve a "Hoy"/Bandoteca según de dónde vino.
 //
 // Ver DECISIONES.md puntos 14 (pasos en vez de tonalidades), 15 (Arpegios
 // menores), 17 (horizontal), 18 (zoom/fullscreen), 19 (metrónomo), 20
@@ -150,10 +152,6 @@ export function destroy() {
   try {
     if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
   } catch (e) { /* ignorar */ }
-  // Por si se navega afuera del reproductor con la hoja de calificación abierta
-  // (ej. botón atrás del navegador): no debe quedar huérfana sobre otra pantalla.
-  const overlay = document.getElementById('ratingOverlay');
-  if (overlay) overlay.remove();
 }
 
 // ---------------------------------------------------------------------
@@ -187,7 +185,7 @@ function renderFuelle(container, exercise, fromRoute, navigate) {
         <button class="icon-btn icon-btn-lg" id="playBtn" aria-label="Reproducir / pausar">${ICON_PLAY}</button>
       </div>
 
-      <button class="btn btn-wine" id="finishBtn">Terminar y calificar</button>
+      <button class="btn btn-wine" id="finishBtn">Terminar</button>
     </div>
   `;
 
@@ -219,7 +217,7 @@ function renderFuelle(container, exercise, fromRoute, navigate) {
   playBtn.addEventListener('click', togglePlay);
   container.querySelector('#finishBtn').addEventListener('click', () => {
     if (playing) togglePlay();
-    showRatingOverlay(exercise, fromRoute, navigate);
+    finishExercise(exercise, fromRoute, navigate);
   });
 
   cleanupFn = () => clearInterval(intervalId);
@@ -403,7 +401,7 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
         </div>
 
         <div class="footer-row">
-          <button class="btn btn-wine" id="finishBtn">Terminar y calificar</button>
+          <button class="btn btn-wine" id="finishBtn">Terminar</button>
         </div>
       </div>
     </div>
@@ -783,7 +781,7 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   function goTo(newIndex, { manual = false } = {}) {
     if (newIndex >= pasos.length) {
       stopAll();
-      showRatingOverlay(exercise, fromRoute, navigate);
+      finishExercise(exercise, fromRoute, navigate);
       return;
     }
     index = Math.max(0, newIndex);
@@ -1066,46 +1064,27 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
 
   container.querySelector('#finishBtn').addEventListener('click', () => {
     stopAll();
-    showRatingOverlay(exercise, fromRoute, navigate);
+    finishExercise(exercise, fromRoute, navigate);
   });
 }
 
 // ---------------------------------------------------------------------
-// Calificación al terminar
+// Fin de ejercicio: registrar progreso y volver
 // ---------------------------------------------------------------------
 
-function showRatingOverlay(exercise, fromRoute, navigate) {
-  const existing = document.getElementById('ratingOverlay');
-  if (existing) existing.remove();
-
-  const overlay = document.createElement('div');
-  overlay.className = 'rating-overlay';
-  overlay.id = 'ratingOverlay';
-  overlay.innerHTML = `
-    <div class="rating-sheet">
-      <h2>¿Cómo te salió?</h2>
-      <div class="rating-buttons">
-        <button class="rating-btn costo" data-rating="costo">Me costó</button>
-        <button class="rating-btn normal" data-rating="normal">Normal</button>
-        <button class="rating-btn bien" data-rating="bien">Bien</button>
-      </div>
-      <button class="btn btn-ghost btn-sm" id="cancelRating" style="margin-top:10px;">Seguir practicando</button>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-
-  overlay.querySelectorAll('[data-rating]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      store.recordRating(exercise.id, btn.dataset.rating);
-      if (fromRoute === 'hoy') store.markStepDone(exercise.id);
-      overlay.remove();
-      toast('¡Registrado! Seguí así.');
-      navigate(fromRoute === 'hoy' ? '#/hoy' : '#/biblioteca');
-    });
-  });
-
-  overlay.querySelector('#cancelRating').addEventListener('click', () => overlay.remove());
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) overlay.remove();
-  });
+/**
+ * Único punto de "fin de ejercicio" (llamado tanto al tocar "Terminar" como
+ * al llegar naturalmente al último paso en modo automático). Ver
+ * DECISIONES.md punto 68: antes acá se mostraba una hoja pidiendo "¿cómo te
+ * salió? me costó/normal/bien" — el usuario pidió sacarla ("siento que no
+ * suma en nada"), así que ahora se registra directamente como si la
+ * respuesta hubiera sido "normal" (la repetición espaciada de `store.js`
+ * sigue funcionando exactamente igual, solo que ya no distingue dificultad:
+ * ver comentario en `store.recordRating`).
+ */
+function finishExercise(exercise, fromRoute, navigate) {
+  store.recordRating(exercise.id, 'normal');
+  if (fromRoute === 'hoy') store.markStepDone(exercise.id);
+  toast('¡Listo! Seguí así.');
+  navigate(fromRoute === 'hoy' ? '#/hoy' : '#/biblioteca');
 }

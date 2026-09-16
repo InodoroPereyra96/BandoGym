@@ -22,6 +22,7 @@ const KEYS = {
   today: 'fuelle:todayState:v2',
   audioSettings: 'fuelle:audioSettings',
   annotations: 'fuelle:annotations:v1',
+  appTime: 'fuelle:appTimeMs',
 };
 
 // Prefijo común de TODAS las claves de la app en localStorage — incluye las
@@ -60,13 +61,36 @@ const SEED_EXERCISES = buildSeedExercises(); // ver DECISIONES.md punto 16: siem
 // ---------- Perfil ----------
 
 export function getProfile() {
-  return readJSON(KEYS.profile, { nivel: 'intermedio' });
+  return readJSON(KEYS.profile, { nivel: 'intermedio', instagram: '' });
 }
 
 export function setNivel(nivel) {
   const profile = getProfile();
   profile.nivel = nivel;
   writeJSON(KEYS.profile, profile);
+}
+
+// Instagram opcional del usuario (ver DECISIONES.md punto 69, pestaña
+// Comunidad): se guarda junto con el resto del perfil, no en una clave
+// aparte — es un solo dato más de "quién sos vos", igual que el nivel.
+export function setInstagram(handle) {
+  const profile = getProfile();
+  profile.instagram = (handle || '').trim();
+  writeJSON(KEYS.profile, profile);
+}
+
+// ---------- Tiempo total en la app (ver DECISIONES.md punto 69) ----------
+// Acumulado en milisegundos mientras la app está VISIBLE (ver `app.js`,
+// donde se mide) — es la métrica que ordena el ranking de la pestaña
+// Comunidad ("tiempo en la app", pedido explícito del usuario).
+
+export function getAppTimeMs() {
+  return readJSON(KEYS.appTime, 0);
+}
+
+export function addAppTimeMs(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) return;
+  writeJSON(KEYS.appTime, getAppTimeMs() + ms);
 }
 
 // ---------- Catálogo de ejercicios (seed + personalizados) ----------
@@ -221,6 +245,13 @@ export function setAudioSettings(partial) {
 
 // ---------- Progreso / repetición espaciada ----------
 
+// Ver DECISIONES.md punto 68: `player.js` ya NO le pregunta al usuario "cómo
+// te salió" (se sacó esa hoja, pedido explícito) — `recordRating` se sigue
+// llamando así y sigue aceptando 'costo'/'normal'/'bien' por compatibilidad
+// (un respaldo restaurado de antes de este cambio puede traer progreso con
+// esos tres valores), pero desde ahora SIEMPRE se la llama con 'normal'. El
+// intervalo sigue creciendo igual que antes con cada práctica, solo que ya
+// no distingue dificultad — es pura repetición espaciada por antigüedad.
 export function getProgress() {
   return readJSON(KEYS.progress, {});
 }

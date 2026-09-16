@@ -93,6 +93,10 @@ src/
                               (multi-imagen) — ver rutas #/nuevo y #/editar/<id>
     profile.js                 Selector de nivel / perfil, exportar/importar
                                 respaldo y aviso de respaldo pendiente
+    community.js                Pestaña "Comunidad": vista previa del ranking
+                                 por tiempo en la app + Instagram opcional
+                                 (todavía sin backend real, ver DECISIONES.md
+                                 punto 69)
 ```
 
 ## Qué es funcional hoy
@@ -190,8 +194,20 @@ src/
   punto 37). También hay un aviso no invasivo en Perfil si pasó más de una
   semana desde el último respaldo (y hay contenido real cargado para
   respaldar).
-- **Calificación**: al terminar cualquier ejercicio se pide "me costó /
-  normal / bien", lo que alimenta la repetición espaciada.
+- **Fin de ejercicio**: al terminar (botón "Terminar", o al llegar
+  automáticamente al último paso en modo auto) se registra el progreso y se
+  vuelve a "Hoy"/Bandoteca, sin pedir ninguna calificación (antes se
+  preguntaba "me costó / normal / bien" — se sacó por pedido del usuario,
+  ver DECISIONES.md punto 68). La repetición espaciada de "Hoy" sigue
+  funcionando igual, solo que ya no distingue dificultad.
+- **Comunidad** *(vista previa, sin backend real todavía)*: pestaña con un
+  ranking por **tiempo total en la app** — mezcla 3 "usuarios de fantasía"
+  con tu propia fila real (el tiempo si se trackea de verdad, ver
+  DECISIONES.md punto 69), botón para dejar tu Instagram (persistido, se
+  ve en tu fila) y un botón "Iniciar sesión con Google" que por ahora solo
+  avisa que no está conectado. Pensada para la comunidad de bandoneonistas
+  del usuario — falta el backend compartido y el login real para que sea
+  gente real la que se vea, no solo vos.
 - **PWA**: manifest + service worker cacheando el app shell completo (funciona
   offline una vez instalada/visitada una vez).
 
@@ -207,6 +223,11 @@ src/
 - Bloqueo real de orientación en pantallas que no son Práctica: no hace falta
   (solo Práctica necesita horizontal) y el bloqueo de orientación del
   navegador es, de por sí, best-effort (ver DECISIONES.md punto 17).
+- Comunidad real (login con Google + backend compartido, ver DECISIONES.md
+  punto 69): la pestaña "Comunidad" hoy es solo una vista previa de interfaz
+  con datos de ejemplo — conectar un servidor de verdad (se evaluó y se
+  aceptó sumar un servicio externo, ej. Firebase) queda para cuando haya más
+  contenido cargado.
 
 ## Biblioteca vacía por diseño
 
