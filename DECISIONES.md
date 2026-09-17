@@ -3686,3 +3686,60 @@ que había quedado sin querer en el `localStorage` de la pestaña de
 producción abierta en el navegador, por ejecutar un script contra la
 pestaña equivocada; no afecta a ningún otro usuario, ese almacenamiento
 es local a cada navegador).
+
+## 74. El botón de bandoneón seguía sin coincidir — se consiguió el archivo fuente real y se corrigió contra la medida exacta
+
+**Contexto:** el usuario insistió en que el botón de play "sigue sin verse
+como en Claude Design" incluso después del punto 73. Pedí acceso al MCP
+de diseño de Claude (`claude_design`) para leer el proyecto original
+directo — no se pudo desde esta sesión (necesita `/design-login`
+interactivo, no disponible acá). El usuario exportó y mandó el paquete de
+diseño completo (`BandoGym diseño estético1.zip`), que incluye un
+`README.md` con specs EXACTAS (no solo el CSS ya usado en los puntos 70-73)
+y, más importante, mandó una captura de pantalla real de cómo se ve el
+botón en el diseño aprobado.
+
+**Comparando la captura contra mi implementación, dos diferencias reales:**
+
+1. **El círculo de play es en realidad un cuadrado redondeado (squircle)**:
+   80×80px con `border-radius:28px` — yo había puesto `border-radius:50%`
+   (círculo perfecto) sin chequearlo contra una referencia visual real,
+   solo inferido de la palabra "círculo" en mi propia descripción del
+   punto 71. Corregido a `border-radius:28px` fijo.
+2. **La botonera de las tapas es una GRILLA 2×3, no una columna de 6**:
+   el README lo dice explícito ("seis puntos... en grilla 2×3") y mi CSS
+   tenía `background-repeat:repeat-y`, que fuerza una sola columna
+   vertical — un error de lectura del punto 71 (asumí "una fila de
+   puntos" en vez de la grilla real). Sacando ese `repeat-y` (el valor
+   por defecto de `background-repeat` ya cubre las dos direcciones) con
+   `background-size:12px 12px` se arma la grilla sola. Se ajustaron
+   también las medidas exactas del README: tapa `34px` de ancho (no 30),
+   radio `12px` (no `var(--radius-sm)`=10px), punto de `3.5px` de radio
+   (no 3px), ícono interno `28px`+`26px` de padding (no 26+22, para
+   acercarse al total de 80×80 real).
+
+**De paso, con el README a mano se confirmó otra pieza que faltaba, en
+la MISMA captura que mandó el usuario:** los indicadores de paso ("1",
+"2"...) son círculos (`border-radius:50%`) en el diseño real — los míos
+eran cuadraditos con esquinas apenas redondeadas (`border-radius:5px`,
+herencia de la estética "fuelle-pentagrama" vieja, nunca actualizados en
+los puntos 70-73). Se corrigió la forma a círculo — el TAMAÑO se dejó en
+22px (no los 34px del README) a propósito: un ejercicio como "Arpegios
+menores" muestra hasta 12 pasos en la misma fila, y 34px cada uno no
+entra en un celular angosto sin herramienta previa de scroll horizontal.
+
+**Nota para el futuro:** el zip trae también `musicxml-engraver.js`
+(grabador de partituras MusicXML→SVG, "usar directamente" según el
+README) y doce partituras ya grabadas en `partituras/` — eso es una
+funcionalidad nueva bastante grande (reemplazar las imágenes de
+partitura actuales por SVGs generados), fuera del alcance de "corregir
+el botón" de este pedido puntual. Queda para cuando el usuario lo pida
+explícito. El zip completo quedó en el scratchpad de esta sesión, no en
+el repo.
+
+**Verificado en el navegador:** paso de prueba real con 2 pasos (para
+ver el indicador "1"/"2" junto al botón, igual que en la captura del
+usuario), a 375px de ancho. El resultado visual coincide con la captura
+enviada: botón cuadrado-redondeado coral, tapas con grilla 2×3 de
+puntos, indicadores de paso circulares. Datos de prueba limpiados al
+terminar.

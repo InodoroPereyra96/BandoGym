@@ -418,30 +418,37 @@ input, select, textarea {
    `overflow:hidden` del botón ya redondea la esquina exterior sola, no
    hace falta que la tapa tenga su propio radio ahí. Vertical SÍ queda con
    inset (`top`/`bottom:8px`): la tapa es más baja que el botón a
-   propósito, igual que en el archivo original. */
+   propósito, igual que en el archivo original.
+   Ver DECISIONES.md punto 74: la botonera de puntos es una GRILLA 2×3, no
+   una sola columna (`background-size:12px 12px` SIN fijar
+   `background-repeat`, que por defecto repite en las dos direcciones —
+   antes tenía `repeat-y`, que la forzaba a una sola columna vertical, uno
+   de los detalles que hacían que "no se viera como en Claude Design"). */
 .icon-btn-lg::before,
 .icon-btn-lg::after {
   content: '';
   position: absolute;
   top: 8px;
   bottom: 8px;
-  width: 30px;
-  border-radius: var(--radius-sm);
+  width: 34px;
+  border-radius: 12px;
   background-color: var(--tapa);
-  background-image: radial-gradient(circle 3px at 9px 11px, var(--text-faint) 99%, transparent 100%);
-  background-repeat: repeat-y;
-  background-size: 100% 15px;
+  background-image: radial-gradient(circle 3.5px at 9px 11px, var(--text-faint) 99%, transparent 100%);
+  background-size: 12px 12px;
 }
 .icon-btn-lg::before { left: 0; }
 .icon-btn-lg::after { right: 0; }
 
+/* El círculo de play es en realidad un "cuadrado redondeado" (80×80,
+   radio 28px) — ver DECISIONES.md punto 74, se había hecho `border-
+   radius:50%` (círculo perfecto) sin chequear la referencia real. */
 .icon-btn-lg svg {
   position: relative;
   z-index: 1;
-  width: 26px;
-  height: 26px;
-  padding: 22px;
-  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  padding: 26px;
+  border-radius: 28px;
   background: var(--wine);
   color: #fff;
   box-shadow: 0 0 0 5px var(--bg);
@@ -1056,10 +1063,15 @@ input, select, textarea {
    salta directo a ese paso (goTo(i) en player.js) en vez de solo mostrar
    posición. Se mantiene el mismo lenguaje visual (dorado = actual/pasado). */
 
+/* Círculos, no cuadraditos redondeados (ver DECISIONES.md punto 74 — el
+   handoff real dice "círculos de 34×34, border-radius:50%"; se mantiene el
+   tamaño de siempre, 22px, porque un ejercicio como "Arpegios menores"
+   tiene hasta 12 pasos en la misma fila y 34px cada uno no entra en un
+   celular angosto — pero la FORMA sí pasa a ser fiel al diseño real). */
 .step-square {
   width: 22px;
   height: 22px;
-  border-radius: 5px;
+  border-radius: 50%;
   border: 1px solid var(--border);
   background: var(--bg-elevated);
   color: var(--text-faint);
@@ -1633,9 +1645,9 @@ body.is-player .app-shell {
      ancha. El ícono/tapas se clampean en conjunto para que todo se achique
      proporcional en pantallas horizontales bajas. */
   body.is-player .icon-btn-lg { height: clamp(56px, 8.5vh, 104px); }
-  body.is-player .icon-btn-lg svg { width: clamp(16px, 3vh, 26px); height: clamp(16px, 3vh, 26px); padding: clamp(12px, 4vh, 22px); }
+  body.is-player .icon-btn-lg svg { width: clamp(16px, 3vh, 28px); height: clamp(16px, 3vh, 28px); padding: clamp(12px, 4.2vh, 26px); }
   body.is-player .icon-btn-lg::before,
-  body.is-player .icon-btn-lg::after { width: clamp(20px, 5vh, 30px); }
+  body.is-player .icon-btn-lg::after { width: clamp(20px, 5vh, 34px); }
 
   body.is-player .chip,
   body.is-player .chip-row { margin-bottom: 0; }
