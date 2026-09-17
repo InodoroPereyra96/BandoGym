@@ -3856,3 +3856,35 @@ estado "¡Tiempo cumplido!"; tocarlo vuelve al selector de siempre (con
 "15 min" todavía marcado); "Cambiar tiempo" en pleno conteo borra
 `fuelle:sessionTimer` y vuelve al selector también. Sin errores de
 consola. Datos de prueba limpiados al terminar.
+
+## 77. Botonera del bandoneón: los puntos quedaban cortados en los bordes de la tapa
+
+**Reporte del usuario:** mandó dos capturas nuevas del botón de play ya
+con la forma de bandoneón (punto 74) diciendo "no está como debería,
+volvé a chequear la referencia" — en las capturas se ve que los puntos
+de la botonera, en vez de una grilla prolija de 6 círculos completos,
+tienen puntos a medio cortar cerca de los bordes de cada tapa.
+
+**Causa:** el punto 74 armó la grilla con un patrón que se REPITE
+(`background-size:12px 12px`, tilando un único punto por toda la tapa).
+El problema: la tapa mide 34px de ancho y una altura variable (72-104px
+según el tamaño de pantalla) — ninguna de esas medidas es un múltiplo
+exacto de 12px, así que el mosaico no calza justo con los bordes reales
+de la tapa. El resultado son puntos completos en el medio y puntos
+cortados a la mitad en los bordes, exactamente lo que se ve en las
+capturas — no era un problema de color ni de forma, era el mecanismo de
+repetición en sí.
+
+**Decisión:** en vez de un patrón que se repite, son 6 puntos FIJOS —
+un `radial-gradient` por punto (6 en total, sin repetir), cada uno
+posicionado a mano dentro de la tapa: 2 columnas en píxeles (12px y
+22px, centradas en el ancho fijo de 34px) y 3 filas en PORCENTAJE (25%,
+50%, 75% — así se acomodan solas si la altura de la tapa cambia con el
+`clamp()` de la pantalla horizontal, sin volver a desalinearse). Con
+posiciones fijas no hay tiling que pueda desalinearse con el borde: cada
+punto es un círculo completo siempre, sea cual sea el tamaño del botón.
+
+**Verificado en el navegador:** paso de prueba real con 2 pasos, en
+vertical (375px) y horizontal (812×375) — los 6 puntos de cada tapa se
+ven como círculos completos y prolijos, sin ninguno cortado en los
+bordes, en los dos tamaños. Ejercicio de prueba borrado al terminar.

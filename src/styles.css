@@ -419,11 +419,16 @@ input, select, textarea {
    hace falta que la tapa tenga su propio radio ahí. Vertical SÍ queda con
    inset (`top`/`bottom:8px`): la tapa es más baja que el botón a
    propósito, igual que en el archivo original.
-   Ver DECISIONES.md punto 74: la botonera de puntos es una GRILLA 2×3, no
-   una sola columna (`background-size:12px 12px` SIN fijar
-   `background-repeat`, que por defecto repite en las dos direcciones —
-   antes tenía `repeat-y`, que la forzaba a una sola columna vertical, uno
-   de los detalles que hacían que "no se viera como en Claude Design"). */
+   Ver DECISIONES.md punto 74: la botonera de puntos es una GRILLA 2×3.
+   Ver DECISIONES.md punto 77: se había armado con un patrón que se REPITE
+   (`background-size:12px 12px` mosaicando toda la tapa) — eso hacía que en
+   los bordes de la tapa aparecieran puntos a medio cortar (el mosaico no
+   calza justo con el ancho/alto real), en vez de una grilla prolija y
+   centrada como la referencia. Ahora son 6 puntos FIJOS (uno por
+   `radial-gradient`, sin repetir), posicionados a mano — 2 columnas fijas
+   en px (el ancho de la tapa no cambia) y 3 filas en % (el alto sí cambia
+   con el `clamp()` de la pantalla horizontal, ver más abajo), así ningún
+   punto queda nunca cortado sea cual sea el tamaño del botón. */
 .icon-btn-lg::before,
 .icon-btn-lg::after {
   content: '';
@@ -433,8 +438,14 @@ input, select, textarea {
   width: 34px;
   border-radius: 12px;
   background-color: var(--tapa);
-  background-image: radial-gradient(circle 3.5px at 9px 11px, var(--text-faint) 99%, transparent 100%);
-  background-size: 12px 12px;
+  background-repeat: no-repeat;
+  background-image:
+    radial-gradient(circle 3.5px at 12px 25%, var(--text-faint) 99%, transparent 100%),
+    radial-gradient(circle 3.5px at 22px 25%, var(--text-faint) 99%, transparent 100%),
+    radial-gradient(circle 3.5px at 12px 50%, var(--text-faint) 99%, transparent 100%),
+    radial-gradient(circle 3.5px at 22px 50%, var(--text-faint) 99%, transparent 100%),
+    radial-gradient(circle 3.5px at 12px 75%, var(--text-faint) 99%, transparent 100%),
+    radial-gradient(circle 3.5px at 22px 75%, var(--text-faint) 99%, transparent 100%);
 }
 .icon-btn-lg::before { left: 0; }
 .icon-btn-lg::after { right: 0; }
