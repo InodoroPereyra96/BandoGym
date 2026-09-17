@@ -419,16 +419,24 @@ input, select, textarea {
    hace falta que la tapa tenga su propio radio ahí. Vertical SÍ queda con
    inset (`top`/`bottom:8px`): la tapa es más baja que el botón a
    propósito, igual que en el archivo original.
-   Ver DECISIONES.md punto 78: SEIS puntos EN TOTAL en todo el bandoneón
-   (tres por tapa, una sola columna centrada), no seis por tapa — el
-   punto 74 había leído mal la referencia ("grilla 2×3" = 6 por tapa, 12
-   en total) y el punto 77 arregló el corte en los bordes pero mantuvo
-   ese conteo equivocado. El usuario lo señaló comparando fotos reales
-   del diseño contra la app: la referencia tiene bastante menos puntos
-   de los que parecía a primera vista. Posiciones fijas (no repetidas,
-   ver punto 77 sobre por qué no conviene un patrón que se repite):
-   centrado en x (17px, mitad del ancho fijo de 34px), 3 filas en % (se
-   acomodan solas si la altura cambia con el `clamp()` de horizontal). */
+   Ver DECISIONES.md punto 79: SEIS puntos POR TAPA (12 en total) — el
+   punto 78 lo había cambiado a 3 por tapa (6 en total) mal interpretando
+   un comentario del usuario, sin chequear el CSS literal. El archivo
+   original (`bandogym-tema.css`, `.bg-bandoneon__tapa::before`) dice
+   explícito en su propio comentario "botonera: 6 puntos" — y ese
+   `::before` es hijo de UNA tapa (hay dos tapas, una por lado), así que
+   son 6 por lado. Ese `::before` original es una caja de 19×29px
+   CENTRADA dentro de la tapa (34×88px) con el patrón tileado 12×12 dentro
+   de esa caja chica — acá se calculó a mano dónde caen esos mismos 6
+   puntos en coordenadas absolutas de la tapa entera (columnas en x=11px
+   y x=23px — el centro de la caja de 19px avanzado por el margen de
+   centrado; filas en 37.5%/51%/65% de la altura de la tapa — la misma
+   matemática pero para el alto, en porcentaje para que se acomode sola
+   si la altura cambia con el `clamp()` de horizontal), en vez de
+   replicar el tileado en una caja chica (eso fue lo que cortaba puntos
+   en los bordes en el punto 77 cuando el tileado cubría TODA la tapa —
+   acá el problema no se repite porque son posiciones fijas, no un
+   patrón que se repite). */
 .icon-btn-lg::before,
 .icon-btn-lg::after {
   content: '';
@@ -440,9 +448,12 @@ input, select, textarea {
   background-color: var(--tapa);
   background-repeat: no-repeat;
   background-image:
-    radial-gradient(circle 3.5px at 17px 25%, var(--text-faint) 99%, transparent 100%),
-    radial-gradient(circle 3.5px at 17px 50%, var(--text-faint) 99%, transparent 100%),
-    radial-gradient(circle 3.5px at 17px 75%, var(--text-faint) 99%, transparent 100%);
+    radial-gradient(circle 3.5px at 11px 37.5%, var(--text-faint) 99%, transparent 100%),
+    radial-gradient(circle 3.5px at 23px 37.5%, var(--text-faint) 99%, transparent 100%),
+    radial-gradient(circle 3.5px at 11px 51%, var(--text-faint) 99%, transparent 100%),
+    radial-gradient(circle 3.5px at 23px 51%, var(--text-faint) 99%, transparent 100%),
+    radial-gradient(circle 3.5px at 11px 65%, var(--text-faint) 99%, transparent 100%),
+    radial-gradient(circle 3.5px at 23px 65%, var(--text-faint) 99%, transparent 100%);
 }
 .icon-btn-lg::before { left: 0; }
 .icon-btn-lg::after { right: 0; }

@@ -3919,3 +3919,66 @@ vertical (375px) y horizontal (812×375) — cada tapa muestra exactamente
 3 puntos en una columna centrada (6 en total entre las dos), coincide
 con las fotos reales que mandó el usuario. Ejercicio de prueba borrado
 al terminar.
+
+## 79. El punto 78 estaba mal — son 6 puntos POR TAPA (12 en total), confirmado contra el CSS literal
+
+**Reporte del usuario:** mandó de nuevo la imagen de referencia original
+diciendo "sigue estando diferente... esto es la imagen de Claude
+Design, y vos hiciste algo diferente. ¿Cómo te exporto exactamente lo
+que hizo Design para que vos no tengas que hacerlo de cero?" — after el
+punto 78 (3 puntos por tapa), la app seguía sin coincidir.
+
+**La respuesta a "cómo exportar exacto" resultó ser que YA la tenía:**
+en vez de pedir un nuevo export, releí el `bandogym-tema.css` LITERAL
+del zip que el usuario ya había mandado (`design_handoff_bandogym/
+bandogym-tema.css`) — no el `README.md` (prosa que ya demostró tener
+imprecisiones dos veces) ni mi propia paráfrasis. La regla real:
+
+```css
+.bg-bandoneon__tapa::before{      /* botonera: 6 puntos */
+  content:''; width:19px; height:29px;
+  background-image:radial-gradient(circle 3.5px at 3.5px 3.5px, ...);
+  background-size:12px 12px;
+}
+```
+
+El comentario "6 puntos" está en el `::before` de UNA tapa (hay dos
+tapas, una por lado) — son 6 POR LADO, 12 en total. El punto 78 (basado
+en una lectura de un mensaje de chat ambiguo, sin volver a mirar el CSS
+real) se equivocó para el otro lado: bajó a 3 por tapa cuando el punto
+74 ya tenía el número correcto (6 por tapa) — lo que estaba mal en el
+punto 74 no era la cantidad, era CÓMO estaban armados esos 6 (el punto 77
+ya lo había corregido bien: de un patrón que se repite y cortaba en los
+bordes, a posiciones fijas — pero manteniendo la cantidad original de 6
+por tapa, que sí era correcta).
+
+**Lección para la próxima vez que haya una duda de este tipo:** ante
+cualquier discrepancia reportada sobre este componente, chequear el CSS
+LITERAL del archivo de diseño primero (no un `README.md` que resume en
+prosa, no una captura de pantalla mirada de pasada, no una relectura de
+un mensaje de chat) — es la única fuente que no tuvo errores en las
+cuatro rondas de idas y vueltas (puntos 71, 73, 74, 77, 78, 79).
+
+**Decisión — recálculo exacto a partir del CSS literal:** la caja
+`::before` original es de 19×29px, CENTRADA dentro de la tapa (34×88px)
+por el `display:flex;align-items:center;justify-content:center` del
+`.bg-bandoneon__tapa` padre — con el patrón tileado 12×12 DENTRO de esa
+caja chica (no de toda la tapa, ese fue el error original del punto 74
+que causó el corte de puntos del punto 77). Como acá los 6 puntos son
+pseudo-elementos del `<button>` mismo (no hay una caja intermedia real
+para centrar), se calculó a mano dónde caen esos mismos 6 puntos en
+coordenadas absolutas de la tapa entera: columnas en `x=11px` y
+`x=23px` (el margen de centrado de la caja de 19px, 7.5px, más las
+posiciones originales 3.5px/15.5px dentro de esa caja) y filas en
+`37.5%`/`51%`/`65%` de la altura de la tapa (mismo cálculo para el
+alto, en porcentaje para que se acomode sola si la altura cambia con el
+`clamp()` de horizontal — el original no necesitaba esto porque su
+mockup era de tamaño fijo). Se mantienen como posiciones FIJAS (no un
+patrón que se repite): eso fue lo que efectivamente arregló el punto 77
+y sigue siendo válido, el error del punto 78 fue la CANTIDAD, no la
+técnica.
+
+**Verificado en el navegador:** paso de prueba real con 2 pasos, en
+vertical (375px) y horizontal (812×375) — cada tapa muestra 6 puntos en
+grilla de 2×3, coincide con la imagen de referencia. Ejercicio de
+prueba borrado al terminar.
