@@ -712,6 +712,38 @@ input, select, textarea {
 
 /* ---------- Pantalla Hoy ---------- */
 
+/* Racha semanal (ver DECISIONES.md punto 75): 7 bloques fijos lunes a
+   domingo — violeta (--gold, "acento" en el tema nuevo) el día cumplido,
+   coral (--wine, "acción") hoy, y un tinte apenas del mismo violeta el que
+   todavía no se cumplió (mismo truco de `color-mix` que ya usa
+   `.step-card.done`/`.step-index`, así se adapta solo a claro/oscuro). */
+.streak-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0;
+}
+.streak-days {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+.streak-days i {
+  display: block;
+  height: 22px;
+  border-radius: 7px;
+  background: color-mix(in oklab, var(--gold) 15%, var(--bg-card));
+}
+.streak-days i.on { background: var(--gold); }
+.streak-days i.today { background: var(--wine); }
+.streak-count {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--wine);
+}
+
 .time-picker {
   display: flex;
   gap: 10px;
@@ -734,6 +766,54 @@ input, select, textarea {
   background: var(--gold);
   border-color: var(--gold);
   color: var(--gold-ink);
+}
+
+/* ---------- Temporizador de sesión (ver DECISIONES.md punto 76) ----------
+   Ocupa el lugar de `.time-picker` (los 3 botones de arriba) en cuanto hay
+   una sesión arrancada — nunca conviven los dos. */
+.session-timer-btn {
+  width: 100%;
+  min-height: 72px;
+  border-radius: var(--radius);
+  border: none;
+  background: var(--gold);
+  color: var(--gold-ink);
+  font-size: 1.1rem;
+  font-weight: 800;
+  cursor: pointer;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  line-height: 1.25;
+}
+.session-timer-btn.paused {
+  background: var(--bg-card);
+  color: var(--text);
+  border: 2px solid var(--gold);
+}
+.session-timer-btn.done {
+  background: var(--wine);
+  color: #fff;
+}
+.session-timer-sub {
+  font-size: 0.72rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+.session-timer-cancel {
+  display: block;
+  margin: 0 auto 16px;
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  min-height: 32px;
 }
 
 .step-card {

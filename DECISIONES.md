@@ -3743,3 +3743,116 @@ usuario), a 375px de ancho. El resultado visual coincide con la captura
 enviada: botón cuadrado-redondeado coral, tapas con grilla 2×3 de
 puntos, indicadores de paso circulares. Datos de prueba limpiados al
 terminar.
+
+## 75. Racha semanal en "Hoy" — nueva funcionalidad, no solo reskin
+
+**Pedido del usuario:** mandó una captura de la pantalla "Hoy" (la del
+diseño original de Claude Design, con la fila de racha semanal — "12
+días" — que el punto 70 había dejado explícitamente afuera por no ser un
+dato existente en la app) y pidió agregarla: "en vez de marcar los días
+de la rutina, que sean solo 7 días" — interpretado como: una semana fija
+de 7 bloques (lunes a domingo), sin acumular una racha consecutiva más
+larga entre semanas ni una ventana móvil de "últimos N días" — la
+simplificación explícita que pidió.
+
+**Qué significa "día cumplido":** se completó al menos un ejercicio ese
+día — se engancha en el mismo `finishExercise()` de `player.js` que ya
+centraliza el fin de cualquier ejercicio (fuelle o escala/arpegio, manual
+o automático, ver punto 68), así que cubre todos los caminos por los que
+se puede terminar de practicar sin buscar cada uno por separado.
+
+**Decisión de datos — `store.js`:**
+- `recordPracticeDay()`: agrega la fecha ISO de HOY (con hora y minuto
+  locales del dispositivo, no UTC — mismo criterio que `todayISO()` de
+  siempre) a un array deduplicado en `fuelle:practiceDays`, si no estaba
+  ya. Se llama una vez por cada `finishExercise()`.
+- `getWeekStreak()`: calcula el lunes de la semana calendario ACTUAL
+  (no depende de qué día se abra la app) y arma los 7 días lunes-domingo,
+  marcando `done` (está en `practiceDays`) y `isToday`. Devuelve también
+  `completedCount` (0-7), el contador que se muestra al lado de los
+  bloques — deliberadamente NO es una racha consecutiva histórica (que
+  necesitaría lógica bastante más compleja: definir qué rompe la racha,
+  qué pasa si faltó un día, etc.) sino simplemente "cuántos de los 7 días
+  de ESTA semana ya se cumplieron" — coherente con el pedido de
+  simplicidad del usuario.
+- Como toda clave nueva lleva el prefijo `fuelle:` de siempre, queda
+  incluida sola en el respaldo/restauración existente (punto 37).
+
+**UI — `today.js`/`styles.css`:** fila `.streak-row` entre la intro y
+"Tiempo disponible" (mismo lugar que en la captura), 7 bloques en grid
+(`.streak-days > i`) + el contador de días a la derecha. Colores por
+variable (no fijos): violeta (`--gold`, "acento" del tema, ver punto 70)
+el día cumplido, coral (`--wine`, "acción") HOY siempre (independiente de
+si se cumplió o no — se nota a simple vista dónde está parado uno en la
+semana), y un tinte apenas violeta (`color-mix`, mismo truco que
+`.step-card.done`) el que todavía no se cumplió — se adapta solo a
+tema claro/oscuro si el usuario prende el toggle del punto 72.
+
+**Verificado en el navegador:** se marcaron a mano 3 días de la semana
+actual (incluido hoy) vía `localStorage` y se confirmó el render exacto
+(2 violeta, 1 coral, 4 tenues, contador "3 días"). Se probó también el
+flujo real de punta a punta: ejercicio de prueba tipo fuelle, botón
+"Terminar", confirmado que `fuelle:practiceDays` sumó la fecha de hoy
+sola y que "Hoy" pasó a mostrar "1 día" con el bloque de hoy en coral.
+Datos de prueba limpiados al terminar.
+
+## 76. Temporizador de sesión: cada botón de tiempo dispara una cuenta atrás real
+
+**Pedido del usuario:** "quiero que cada botón de tiempo disponible
+dispare una cuenta atrás. un temporizador. y que el botón que se
+seleccione, ocupe el lugar de los tres botones. Una vez que se
+seleccione que se ponga el botón grande con un texto de 'A estudiar!
+*tiempo*'". Pedido explícito, sin margen de duda en lo esencial — quedó
+por decidir de forma autónoma qué pasa al tocar el botón grande una vez
+elegido, cómo volver a elegir otro tiempo, y qué pasa al llegar a cero.
+
+**Decisiones tomadas sin preguntar (documentadas acá):**
+- **Tocar el botón grande pausa/reanuda** la cuenta atrás (mismo patrón
+  que ya usa el temporizador de "fuelle" en `player.js` — tocar el play
+  para pausar). Evita necesitar un botón de pausa aparte.
+- **"Cambiar tiempo"** es un link chico debajo del botón grande, para
+  volver al selector de 15/30/45 sin esperar a que se cumpla el tiempo.
+- **Al llegar a cero**: el botón pasa a "¡Tiempo cumplido! 🎉 · Tocá para
+  elegir de nuevo" (coral) + un toast — tocarlo vuelve al selector. No
+  se agregó sonido (requeriría lidiar con políticas de autoplay del
+  navegador sin que el usuario lo haya pedido).
+- **El "presupuesto" de tiempo que ya usaba el algoritmo de armado de
+  rutina (15/30/45, ver `ensureTodayState`) NO se reemplaza — convive**:
+  tocar un botón sigue fijando ese presupuesto (para elegir cuánto
+  contenido entra en la rutina) Y ADEMÁS arranca el temporizador nuevo.
+  Son dos usos del mismo número, no un reemplazo de uno por el otro.
+
+**Decisión técnica — persistencia por timestamp absoluto, no por
+`setInterval` acumulando segundos:** `store.js` guarda un `endAt`
+(timestamp de cuándo se cumple) en vez de ir restando de a un segundo —
+así el conteo sigue siendo EXACTO sin importar cuánto tiempo estuvo la
+pantalla "Hoy" desmontada (ej. el usuario se fue a practicar un
+ejercicio del listado y volvió 10 minutos después): alcanza con
+recalcular `endAt - Date.now()` cada vez que hace falta mostrar el
+valor, no hace falta que ningún timer sobreviva a la navegación entre
+pantallas. Al pausar se congela como `pausedRemainingMs` (con `endAt`
+en `null`). Como la clave lleva el prefijo `fuelle:` de siempre, queda
+incluida sola en el respaldo/restauración existente (punto 37) — aunque
+tiene poco sentido restaurar un cronómetro corriendo desde un respaldo
+viejo, no hace daño dejarlo así por consistencia con el resto de la app.
+
+`today.js` sí usa un `setInterval` de 1 segundo, pero solo para
+REPINTAR la pantalla mientras está montada y corriendo — se limpia al
+pausar, al desmontar la pantalla (nuevo `export function destroy()`,
+enganchado en `app.js` como cualquier otra pantalla) y al arrancar uno
+nuevo, así nunca quedan dos corriendo en paralelo ni uno huérfano
+después de navegar a otra pantalla.
+
+**Verificado en el navegador:** flujo completo — tocar "15 min" hace
+aparecer el botón grande "¡A estudiar! 15:00" reemplazando los 3 chips,
+cuenta atrás real confirmada (bajó a "14:49" en el tiempo esperado);
+pausar congela el valor exacto (confirmado leyendo
+`store.getSessionTimer()` dos veces con una espera en el medio, mismo
+`remainingMs`); reanudar sigue desde ahí; navegar a Perfil y volver a
+Hoy confirma que el conteo siguió corriendo de verdad mientras la
+pantalla estaba desmontada (bajó de "14:34" a "14:13" tras un paso por
+otra pantalla); forzar `endAt` a 1.5s en el futuro y esperar confirma el
+estado "¡Tiempo cumplido!"; tocarlo vuelve al selector de siempre (con
+"15 min" todavía marcado); "Cambiar tiempo" en pleno conteo borra
+`fuelle:sessionTimer` y vuelve al selector también. Sin errores de
+consola. Datos de prueba limpiados al terminar.

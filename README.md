@@ -112,7 +112,16 @@ src/
   importar cuántas sean ni cómo se llame la articulación de cada una (ya no
   está limitado a Portato / Nota repetida / Continuo, ver DECISIONES.md
   puntos 15 y 38): el botón de la fila las cicla en vez de buscar "otro
-  similar" en el resto de la biblioteca.
+  similar" en el resto de la biblioteca. También muestra una **racha
+  semanal**: 7 bloques fijos lunes a domingo, marcando en qué días se
+  terminó al menos un ejercicio esta semana (ver DECISIONES.md punto 75).
+  Elegir un tiempo (15/30/45 min) además de fijar cuánto contenido entra
+  en la rutina (como siempre) **arranca un temporizador de sesión real**:
+  el picker se reemplaza por un botón grande "¡A estudiar! MM:SS" que
+  cuenta atrás de verdad (sigue corriendo aunque se navegue a practicar
+  un ejercicio y se vuelva), se puede pausar/reanudar tocándolo, y "Cambiar
+  tiempo" vuelve al selector en cualquier momento (ver DECISIONES.md
+  punto 76).
 - **Reproductor de práctica**: cada ejercicio de escala/arpegio es una
   secuencia de **pasos** (una imagen por paso — típicamente tonalidad +
   dirección de fuelle, ej. "La menor abriendo"), cada uno con su **propia

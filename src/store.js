@@ -23,6 +23,8 @@ const KEYS = {
   audioSettings: 'fuelle:audioSettings',
   annotations: 'fuelle:annotations:v1',
   appTime: 'fuelle:appTimeMs',
+  practiceDays: 'fuelle:practiceDays',
+  sessionTimer: 'fuelle:sessionTimer',
 };
 
 // Prefijo común de TODAS las claves de la app en localStorage — incluye las
@@ -116,6 +118,90 @@ export function getAppTimeMs() {
 export function addAppTimeMs(ms) {
   if (!Number.isFinite(ms) || ms <= 0) return;
   writeJSON(KEYS.appTime, getAppTimeMs() + ms);
+}
+
+// ---------- Racha semanal (ver DECISIONES.md punto 75) ----------
+// Un día cuenta como "cumplido" si se terminó al menos un ejercicio ese día
+// (ver `finishExercise()` en player.js, que llama `recordPracticeDay()` en
+// cada "Terminar" o avance automático de fin de ejercicio). Semana FIJA
+// lunes a domingo — no una ventana de "últimos 7 días" que se corre sola —
+// pedido explícito del usuario: "que sean solo 7 días", la semana
+// calendario de siempre, sin acumular historial más largo ni una racha
+// consecutiva entre semanas.
+
+export function recordPracticeDay() {
+  const days = readJSON(KEYS.practiceDays, []);
+  const iso = todayISO();
+  if (!days.includes(iso)) {
+    days.push(iso);
+    writeJSON(KEYS.practiceDays, days);
+  }
+}
+
+/**
+ * Arma los 7 días de la semana calendario actual (lunes a domingo) marcando
+ * cuáles están cumplidos. Devuelve `{ week: [{date, done, isToday}], completedCount }`.
+ */
+export function getWeekStreak() {
+  const doneSet = new Set(readJSON(KEYS.practiceDays, []));
+  const now = new Date();
+  const dow = now.getDay(); // 0=domingo .. 6=sábado
+  const mondayOffset = dow === 0 ? -6 : 1 - dow; // días desde hoy hasta el lunes de ESTA semana
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset);
+  const todayIso = todayISO();
+
+  const week = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    week.push({ date: iso, done: doneSet.has(iso), isToday: iso === todayIso });
+  }
+  return { week, completedCount: week.filter((d) => d.done).length };
+}
+
+// ---------- Temporizador de sesión en "Hoy" (ver DECISIONES.md punto 76) ----------
+// Pedido del usuario: cada botón de tiempo disponible (15/30/45) dispara una
+// cuenta atrás real, no solo fija el "presupuesto" que ya usaba el algoritmo
+// de armado de rutina (eso se sigue haciendo igual, en paralelo). Se guarda
+// como un `endAt` (timestamp absoluto) en vez de ir descontando segundos a
+// mano: así el conteo sigue siendo exacto sin importar cuánto tiempo estuvo
+// la pantalla sin repintarse (ej. el usuario se fue a practicar un ejercicio
+// y volvió más tarde) — no hace falta ningún `setInterval` que sobreviva a
+// la navegación entre pantallas, alcanza con recalcular `endAt - Date.now()`
+// cada vez que hace falta mostrar el valor. Al pausar se congela en
+// `pausedRemainingMs` (con `endAt` en null) en vez de seguir corriendo.
+
+export function startSessionTimer(totalMin) {
+  writeJSON(KEYS.sessionTimer, { totalMin, endAt: Date.now() + totalMin * 60000, pausedRemainingMs: null });
+}
+
+export function pauseSessionTimer() {
+  const t = readJSON(KEYS.sessionTimer, null);
+  if (!t || t.endAt == null) return; // ya pausado, o no hay timer
+  const remaining = Math.max(0, t.endAt - Date.now());
+  writeJSON(KEYS.sessionTimer, { ...t, endAt: null, pausedRemainingMs: remaining });
+}
+
+export function resumeSessionTimer() {
+  const t = readJSON(KEYS.sessionTimer, null);
+  if (!t || t.pausedRemainingMs == null) return; // no está pausado
+  writeJSON(KEYS.sessionTimer, { ...t, endAt: Date.now() + t.pausedRemainingMs, pausedRemainingMs: null });
+}
+
+export function resetSessionTimer() {
+  localStorage.removeItem(KEYS.sessionTimer);
+}
+
+/**
+ * Estado actual del temporizador, ya con el tiempo restante calculado (en
+ * ms) — `null` si no hay ninguno arrancado. `remainingMs` llega a 0 solo
+ * cuando de verdad se cumplió el tiempo (nunca negativo).
+ */
+export function getSessionTimer() {
+  const t = readJSON(KEYS.sessionTimer, null);
+  if (!t) return null;
+  const remainingMs = t.pausedRemainingMs != null ? t.pausedRemainingMs : Math.max(0, t.endAt - Date.now());
+  return { totalMin: t.totalMin, paused: t.pausedRemainingMs != null, remainingMs, done: remainingMs <= 0 };
 }
 
 // ---------- Catálogo de ejercicios (seed + personalizados) ----------

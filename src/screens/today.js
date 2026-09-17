@@ -5,6 +5,7 @@ import * as store from '../store.js';
 import { NIVEL_LABEL, ARTICULACION_LABEL, GRUPO_ARPEGIOS_MENORES, NOMBRE_GRUPO_ARPEGIOS_MENORES } from '../theory.js';
 import { articulacionBadge, tipoBadge, fmtMin, toast } from '../ui.js';
 import { computeGroupDurationMin } from '../data.js';
+import { formatMMSS } from '../util.js';
 
 const TIME_OPTIONS = [15, 30, 45];
 const TIMEBUDGET_KEY = 'fuelle:timeBudget';
@@ -18,6 +19,8 @@ function saveBudget(v) {
   localStorage.setItem(TIMEBUDGET_KEY, String(v));
 }
 
+let timerInterval = null;
+
 export function render(container, { navigate }) {
   const profile = store.getProfile();
   const budget = getSavedBudget();
@@ -27,10 +30,13 @@ export function render(container, { navigate }) {
     <div class="eyebrow">Nivel: ${NIVEL_LABEL[profile.nivel]}</div>
     <p class="subtitle">Tu ritual de hoy, en orden: primero fuelle, después escalas y arpegios.</p>
 
-    <div class="section-title">Tiempo disponible</div>
-    <div class="time-picker" id="timePicker">
-      ${TIME_OPTIONS.map((t) => `<button class="time-chip ${t === budget ? 'active' : ''}" data-min="${t}">${t} min</button>`).join('')}
+    <div class="streak-row">
+      <div class="streak-days" id="streakDays"></div>
+      <span class="streak-count" id="streakCount"></span>
     </div>
+
+    <div class="section-title" id="timeSectionTitle"></div>
+    <div id="timeSection"></div>
 
     <div class="section-title">Rutina de hoy</div>
     <div id="stepsList"></div>
@@ -121,20 +127,129 @@ export function render(container, { navigate }) {
     });
   }
 
+  /**
+   * Racha semanal (ver DECISIONES.md punto 75): 7 bloques fijos, lunes a
+   * domingo — se pintan una sola vez al entrar a la pantalla, no hace falta
+   * repintarlos junto con `paintSteps()` (solo cambian al terminar un
+   * ejercicio de verdad, que siempre implica salir de esta pantalla y
+   * volver, es decir un `render()` nuevo).
+   */
+  function paintStreak() {
+    const { week, completedCount } = store.getWeekStreak();
+    container.querySelector('#streakDays').innerHTML = week
+      .map((d) => `<i class="${d.isToday ? 'today' : d.done ? 'on' : ''}"></i>`)
+      .join('');
+    container.querySelector('#streakCount').textContent = `${completedCount} día${completedCount === 1 ? '' : 's'}`;
+  }
+  paintStreak();
+
   paintSteps();
 
-  container.querySelector('#timePicker').addEventListener('click', (e) => {
-    const btn = e.target.closest('.time-chip');
-    if (!btn) return;
-    const min = Number(btn.dataset.min);
-    saveBudget(min);
-    store.ensureTodayState(profile.nivel, min);
-    render(container, { navigate });
-  });
+  const timeSection = container.querySelector('#timeSection');
+  const timeSectionTitle = container.querySelector('#timeSectionTitle');
+
+  function clearTimerInterval() {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }
+
+  /**
+   * Temporizador de sesión (ver DECISIONES.md punto 76): reemplaza el
+   * picker de 15/30/45 min por un botón grande con cuenta atrás en cuanto
+   * hay una sesión arrancada — el picker y el botón grande son estados
+   * mutuamente excluyentes de la MISMA sección, nunca conviven. Se repinta
+   * entera cada vez que cambia algo (elegir tiempo, pausar/continuar,
+   * cancelar) en vez de tener rutas de actualización parcial separadas —
+   * es una sección chica, no vale la pena la complejidad extra.
+   */
+  function paintTimeSection() {
+    clearTimerInterval();
+    const timer = store.getSessionTimer();
+
+    if (!timer) {
+      timeSectionTitle.textContent = 'Tiempo disponible';
+      timeSection.innerHTML = `
+        <div class="time-picker" id="timePicker">
+          ${TIME_OPTIONS.map((t) => `<button class="time-chip ${t === budget ? 'active' : ''}" data-min="${t}">${t} min</button>`).join('')}
+        </div>`;
+      timeSection.querySelector('#timePicker').addEventListener('click', (e) => {
+        const btn = e.target.closest('.time-chip');
+        if (!btn) return;
+        const min = Number(btn.dataset.min);
+        saveBudget(min);
+        store.ensureTodayState(profile.nivel, min);
+        store.startSessionTimer(min);
+        paintTimeSection();
+        paintSteps();
+      });
+      return;
+    }
+
+    timeSectionTitle.textContent = 'Sesión de práctica';
+
+    if (timer.done) {
+      timeSection.innerHTML = `
+        <button type="button" class="session-timer-btn done" id="sessionTimerBtn">
+          ¡Tiempo cumplido! 🎉
+          <span class="session-timer-sub">Tocá para elegir de nuevo</span>
+        </button>`;
+      timeSection.querySelector('#sessionTimerBtn').addEventListener('click', () => {
+        store.resetSessionTimer();
+        paintTimeSection();
+      });
+      return;
+    }
+
+    const label = timer.paused
+      ? `⏸ Pausado — ${formatMMSS(timer.remainingMs / 1000)}`
+      : `¡A estudiar! ${formatMMSS(timer.remainingMs / 1000)}`;
+
+    timeSection.innerHTML = `
+      <button type="button" class="session-timer-btn ${timer.paused ? 'paused' : ''}" id="sessionTimerBtn">${label}</button>
+      <button type="button" class="session-timer-cancel" id="sessionTimerCancel">Cambiar tiempo</button>`;
+
+    timeSection.querySelector('#sessionTimerBtn').addEventListener('click', () => {
+      if (store.getSessionTimer().paused) store.resumeSessionTimer();
+      else store.pauseSessionTimer();
+      paintTimeSection();
+    });
+    timeSection.querySelector('#sessionTimerCancel').addEventListener('click', () => {
+      store.resetSessionTimer();
+      paintTimeSection();
+    });
+
+    // Solo tickea mientras está corriendo (no pausado) — pausar ya frena el
+    // conteo del lado de los datos (ver `store.pauseSessionTimer`), acá
+    // alcanza con no reprogramar el intervalo.
+    if (!timer.paused) {
+      timerInterval = setInterval(() => {
+        const t = store.getSessionTimer();
+        if (!t) { clearTimerInterval(); return; }
+        if (t.done) {
+          clearTimerInterval();
+          toast('¡Se cumplió el tiempo de práctica!');
+          paintTimeSection();
+          return;
+        }
+        const btn = timeSection.querySelector('#sessionTimerBtn');
+        if (btn) btn.textContent = `¡A estudiar! ${formatMMSS(t.remainingMs / 1000)}`;
+      }, 1000);
+    }
+  }
+  paintTimeSection();
 
   container.querySelector('#regenBtn').addEventListener('click', () => {
     store.regenerateToday(profile.nivel, budget);
     toast('Rutina de hoy renovada.');
     paintSteps();
   });
+}
+
+export function destroy() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
 }

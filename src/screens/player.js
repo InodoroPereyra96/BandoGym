@@ -1086,6 +1086,7 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
  */
 function finishExercise(exercise, fromRoute, navigate) {
   store.recordRating(exercise.id, 'normal');
+  store.recordPracticeDay(); // racha semanal de "Hoy", ver DECISIONES.md punto 75
   if (fromRoute === 'hoy') store.markStepDone(exercise.id);
   toast('¡Listo! Seguí así.');
   navigate(fromRoute === 'hoy' ? '#/hoy' : '#/biblioteca');
