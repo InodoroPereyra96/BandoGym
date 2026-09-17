@@ -3888,3 +3888,34 @@ punto es un círculo completo siempre, sea cual sea el tamaño del botón.
 vertical (375px) y horizontal (812×375) — los 6 puntos de cada tapa se
 ven como círculos completos y prolijos, sin ninguno cortado en los
 bordes, en los dos tamaños. Ejercicio de prueba borrado al terminar.
+
+## 78. La botonera tenía el DOBLE de puntos de la cuenta: 12 en vez de 6 en total
+
+**Reporte del usuario:** mandó fotos reales de su celular (vertical y
+horizontal, ya con el arreglo del punto 77 puesto) señalando "mirá el
+bandoneón... fijate cuántos botones tiene, solo seis... comparalo con lo
+que hiciste". Comparando sus fotos contra la referencia real del diseño:
+la app mostraba 6 puntos POR TAPA (2 columnas × 3 filas, 12 en total,
+tal como se armó en el punto 74) pero la referencia tiene 6 EN TOTAL
+entre las dos tapas — o sea 3 por tapa, no 6.
+
+**Causa:** el punto 74 interpretó literalmente la frase del README del
+handoff ("seis puntos... en grilla 2×3") como "6 puntos por tapa
+formando una grilla de 2×3" — en realidad son 6 puntos TOTALES en todo
+el conjunto del bandoneón (3 por tapa, una sola columna), y la frase del
+README describía mal la cantidad real que muestra su propia captura.
+Ya van dos veces que el texto del handoff no coincide exacto con la
+imagen real (ver también el punto 74, círculo vs. cuadrado redondeado) —
+a partir de ahora, ante cualquier duda de cantidad/forma en este
+componente puntual, la imagen manda por sobre la descripción escrita.
+
+**Decisión:** 3 puntos por tapa (una columna centrada en `x=17px`, la
+mitad del ancho fijo de 34px) en vez de 2 columnas × 3 filas — mismas 3
+filas en porcentaje (25/50/75%) que ya se habían calibrado en el punto
+77 para acomodarse solas al `clamp()` de la pantalla horizontal.
+
+**Verificado en el navegador:** paso de prueba real con 2 pasos, en
+vertical (375px) y horizontal (812×375) — cada tapa muestra exactamente
+3 puntos en una columna centrada (6 en total entre las dos), coincide
+con las fotos reales que mandó el usuario. Ejercicio de prueba borrado
+al terminar.

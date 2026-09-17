@@ -419,16 +419,16 @@ input, select, textarea {
    hace falta que la tapa tenga su propio radio ahí. Vertical SÍ queda con
    inset (`top`/`bottom:8px`): la tapa es más baja que el botón a
    propósito, igual que en el archivo original.
-   Ver DECISIONES.md punto 74: la botonera de puntos es una GRILLA 2×3.
-   Ver DECISIONES.md punto 77: se había armado con un patrón que se REPITE
-   (`background-size:12px 12px` mosaicando toda la tapa) — eso hacía que en
-   los bordes de la tapa aparecieran puntos a medio cortar (el mosaico no
-   calza justo con el ancho/alto real), en vez de una grilla prolija y
-   centrada como la referencia. Ahora son 6 puntos FIJOS (uno por
-   `radial-gradient`, sin repetir), posicionados a mano — 2 columnas fijas
-   en px (el ancho de la tapa no cambia) y 3 filas en % (el alto sí cambia
-   con el `clamp()` de la pantalla horizontal, ver más abajo), así ningún
-   punto queda nunca cortado sea cual sea el tamaño del botón. */
+   Ver DECISIONES.md punto 78: SEIS puntos EN TOTAL en todo el bandoneón
+   (tres por tapa, una sola columna centrada), no seis por tapa — el
+   punto 74 había leído mal la referencia ("grilla 2×3" = 6 por tapa, 12
+   en total) y el punto 77 arregló el corte en los bordes pero mantuvo
+   ese conteo equivocado. El usuario lo señaló comparando fotos reales
+   del diseño contra la app: la referencia tiene bastante menos puntos
+   de los que parecía a primera vista. Posiciones fijas (no repetidas,
+   ver punto 77 sobre por qué no conviene un patrón que se repite):
+   centrado en x (17px, mitad del ancho fijo de 34px), 3 filas en % (se
+   acomodan solas si la altura cambia con el `clamp()` de horizontal). */
 .icon-btn-lg::before,
 .icon-btn-lg::after {
   content: '';
@@ -440,12 +440,9 @@ input, select, textarea {
   background-color: var(--tapa);
   background-repeat: no-repeat;
   background-image:
-    radial-gradient(circle 3.5px at 12px 25%, var(--text-faint) 99%, transparent 100%),
-    radial-gradient(circle 3.5px at 22px 25%, var(--text-faint) 99%, transparent 100%),
-    radial-gradient(circle 3.5px at 12px 50%, var(--text-faint) 99%, transparent 100%),
-    radial-gradient(circle 3.5px at 22px 50%, var(--text-faint) 99%, transparent 100%),
-    radial-gradient(circle 3.5px at 12px 75%, var(--text-faint) 99%, transparent 100%),
-    radial-gradient(circle 3.5px at 22px 75%, var(--text-faint) 99%, transparent 100%);
+    radial-gradient(circle 3.5px at 17px 25%, var(--text-faint) 99%, transparent 100%),
+    radial-gradient(circle 3.5px at 17px 50%, var(--text-faint) 99%, transparent 100%),
+    radial-gradient(circle 3.5px at 17px 75%, var(--text-faint) 99%, transparent 100%);
 }
 .icon-btn-lg::before { left: 0; }
 .icon-btn-lg::after { right: 0; }
