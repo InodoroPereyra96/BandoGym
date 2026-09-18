@@ -3982,3 +3982,89 @@ técnica.
 vertical (375px) y horizontal (812×375) — cada tapa muestra 6 puntos en
 grilla de 2×3, coincide con la imagen de referencia. Ejercicio de
 prueba borrado al terminar.
+
+## 80. Segunda entrega de diseño ("design_handoff_bandogym" v2, con COMPONENTES.md): reescritura literal de 5 componentes
+
+**Contexto:** el usuario compartió una segunda carpeta de handoff
+(`BandoGym diseño estético2/design_handoff_bandogym/`) con un archivo
+nuevo, `COMPONENTES.md`, que el propio archivo explica que existe
+"porque el README.md describe los componentes y eso lleva a
+reconstruirlos de memoria" — son bloques de código HTML/CSS literales
+para copiar tal cual, con una carpeta `ref/` de capturas para comparar.
+Pedido explícito: "Leé COMPONENTES.md y copiá esos bloques literalmente.
+Después comparalo con las imágenes de ref/ y corregí lo que no
+coincida." Se comparó cada uno de los 5 componentes documentados contra
+el CSS/HTML existente:
+
+**1. Raya de fuelle (`.fuelle-divider`):** tenía un bug real — el `span`
+del medio llevaba `margin:0 3px`, que abre un hueco entre tapa y fuelle
+que el propio COMPONENTES.md marca como error explícito ("Van pegadas,
+sin separación. El contenedor NO lleva `gap`"). Se sacó el margin. Además
+el oscuro (Práctica) usaba los mismos alto/tramos que el claro (22px
+tapa/16px banda/tramos 7-2-6) cuando el archivo especifica que el
+oscuro es más alto (24px tapa/17px banda/tramos 8-2-7) — se agregó un
+override `body.is-player`/`body.tema-oscuro-global` para esos tres
+valores. Los colores del gradiente claro pasaron de `color-mix()`
+aproximado a los hex literales del archivo (`#cfc4ee`/`#e3dcf6`,
+sombra `rgba(91,60,230,.5)`) — el oscuro ya estaba literal desde antes.
+
+**2. Bandoneón con el play (`.icon-btn-lg`):** el componente más
+retocado de toda la app (puntos 71-79) tenía, pese a los ajustes previos,
+un error estructural que el enfoque de pseudo-elementos no podía
+resolver: el fuelle del medio debía verse MÁS BAJO que las tapas (74px
+vs 88px, "las cachas sobresalen arriba y abajo") pero al ser el
+`background-image` del `<button>` completo (sin acotar en alto solo en
+el tramo central), se veía tan alto como las tapas — error que
+COMPONENTES.md lista explícito ("Cachas y fuelle del mismo alto"). Un
+`background-image` no se puede acotar en Y solo en un rango de X sin
+`mask`/`clip-path`. Se resolvió reescribiendo el componente con la
+estructura DOM real de COMPONENTES.md en vez de simularla con CSS:
+`player.js` ahora arma el botón con `bandoneonPlayHTML()` — dos
+`<span class="bg-tapa">` (cada uno con 6 `<i>` reales en grid 2×3, no
+un `radial-gradient`), un `<span class="bg-fuelle">` de 74px entre
+medio, y un `<span class="bg-play">` absoluto con el ícono adentro. El
+toggle play/pausa pasa a actualizar solo `.bg-play` (antes pisaba TODO
+el contenido del botón). De paso, el color de los puntos pasó de
+`var(--text-faint)` (que en oscuro da `#b5aecd`, un lila más claro) al
+`#8d86a3` literal del archivo — el componente vive siempre en Práctica
+(oscuro fijo), así que no hace falta que sea una variable adaptable.
+Clamps de horizontal reescritos para las piezas nuevas (tapa/puntos/
+fuelle/play), misma proporción 56/104 que ya se usaba.
+
+**3. Pliegues como barra (progreso/tempo):** el "progreso de la rutina
+en Hoy" NO existía como motivo visual — Hoy solo tenía el texto "X de Y
+completados". Se agregó `.pliegues-bar` (12 `<i>`, `skewX` alternado,
+`gap:3px`, sin `border-radius`, tal cual COMPONENTES.md) debajo del
+título "Rutina de hoy" en `today.js`, con la cantidad de pliegues
+llenos = `Math.round((hechos/total)*12)` (misma fórmula que trae el
+archivo). El color inactivo se dejó adaptable (`color-mix` con
+`--bg-card`) en vez del hex fijo del mock, siguiendo el mismo criterio
+que el resto de la app para que funcione también con el tema oscuro
+global (punto 72) — el mock original es de un solo tema, esta app tiene
+dos. La variante "tempo" (gauge de BPM en la tarjeta del metrónomo) NO
+se implementó: reemplazar el slider de BPM actual por un gauge de
+pliegues es un cambio funcional de UI más grande que una corrección
+visual, y no estaba roto lo que hay — queda pendiente si el usuario lo
+pide explícitamente.
+
+**4. Racha semanal:** ya coincidía (mismos 22px/7px radio/5px gap/
+colores `--gold`/`--wine` literales); no se tocó.
+
+**5. Bloque de rutina, estado actual:** tampoco existía — Hoy solo
+distinguía `done`/no-`done`, sin remarcar cuál es el próximo a hacer.
+Se agregó `.step-card.current` (borde 2px sólido + `box-shadow:0 4px 0`
+sin blur, chips invertidos vía `.badge-tipo` con fondo `--text`/texto
+blanco, número circular en `--wine` en vez de `--gold`) y en `today.js`
+se marca como "current" el primer paso de la lista con `done:false`
+(`findIndex`) — puramente visual, no cambia el orden ni la lógica de
+selección de la rutina.
+
+**Verificado en el navegador:** rutina de prueba con 3 pasos (uno
+`done`, uno pendiente = "current", uno pendiente normal) en Hoy —
+pliegues de progreso (4/12 llenos con 1 de 3 hecho, redondeo correcto),
+bloque actual con borde/relieve sólido y chips invertidos. Bandoneón de
+Práctica en vertical (375px) y horizontal (812×375): tapas con grilla
+2×3 real, fuelle visiblemente más bajo que las tapas, play centrado con
+halo, toggle play/pausa funcionando sin romper el resto del botón. Sin
+errores de consola. Ejercicios y estado de "hoy" de prueba borrados al
+terminar.

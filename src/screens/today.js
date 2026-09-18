@@ -39,12 +39,23 @@ export function render(container, { navigate }) {
     <div id="timeSection"></div>
 
     <div class="section-title">Rutina de hoy</div>
+    <div class="pliegues-bar" id="routineProgress"></div>
     <div id="stepsList"></div>
 
     <button class="btn btn-outline btn-sm" id="regenBtn" style="margin-top:6px;">🔄 Rehacer selección de hoy</button>
   `;
 
   const stepsList = container.querySelector('#stepsList');
+  const routineProgress = container.querySelector('#routineProgress');
+
+  // Doce pliegues, tantos llenos como corresponda a la proporción hecha/total
+  // (ver COMPONENTES.md sección 3, "Generándolo en código") — mismo redondeo
+  // que el mock, no un truncado.
+  function paintRoutineProgress(doneCount, total) {
+    const N = 12;
+    const filled = total > 0 ? Math.round((doneCount / total) * N) : 0;
+    routineProgress.innerHTML = Array.from({ length: N }, (_, i) => `<i class="${i < filled ? 'filled' : ''}"></i>`).join('');
+  }
 
   function paintSteps() {
     const st = store.getTodayState();
@@ -54,10 +65,15 @@ export function render(container, { navigate }) {
           <div class="big-icon">♪</div>
           <p>Todavía no hay ejercicios cargados para este nivel.<br>Agregá alguno desde "Nuevo".</p>
         </div>`;
+      routineProgress.innerHTML = '';
       return;
     }
 
     const doneCount = st.steps.filter((s) => s.done).length;
+    // El "estado actual" (ver COMPONENTES.md sección 5) es el primer paso
+    // sin hacer: el ancla visual de la lista, el que sigue.
+    const currentIdx = st.steps.findIndex((s) => !s.done);
+    paintRoutineProgress(doneCount, st.steps.length);
 
     stepsList.innerHTML = st.steps
       .map((step, i) => {
@@ -69,8 +85,9 @@ export function render(container, { navigate }) {
         const swapAttrs = esArpegioMenor
           ? `data-cycle="${ex.id}" aria-label="Cambiar articulación" title="Cambiar articulación (cicla entre todas las variantes cargadas)"`
           : `data-swap="${ex.id}" aria-label="Pedir otro similar" title="Otro similar"`;
+        const estado = step.done ? 'done' : (i === currentIdx ? 'current' : '');
         return `
-        <div class="card step-card ${step.done ? 'done' : ''}" data-exercise="${ex.id}">
+        <div class="card step-card ${estado}" data-exercise="${ex.id}">
           <div class="step-index">${step.done ? '✓' : i + 1}</div>
           <button class="card-tappable step-body" data-open="${ex.id}" style="border:none;padding:0;background:transparent;">
             <div class="card-title">${titulo}</div>

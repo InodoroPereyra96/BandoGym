@@ -73,10 +73,10 @@
      bandoneón) — un solo lugar para los 4 colores del motivo, cada uno
      redefinido más abajo para el tema oscuro de Práctica. */
   --tapa: var(--gold);
-  --fuelle-a: color-mix(in oklab, var(--gold) 22%, white);
+  --fuelle-a: #cfc4ee;
   --fuelle-b: var(--gold);
-  --fuelle-c: color-mix(in oklab, var(--gold) 12%, white);
-  --fuelle-shadow: color-mix(in oklab, var(--gold) 50%, transparent);
+  --fuelle-c: #e3dcf6;
+  --fuelle-shadow: rgba(91, 60, 230, 0.5);
 }
 
 /* Tema oscuro (ver comentario grande de arriba y DECISIONES.md puntos 70 y
@@ -248,13 +248,30 @@ input, select, textarea {
   border-radius: 5px;
   background: var(--tapa);
 }
+/* Sin `margin` en el span (ver COMPONENTES.md, ronda de diseño 2): las tres
+   piezas van PEGADAS, sin separación — un margen acá abre un hueco entre
+   tapa y fuelle que el archivo de diseño señala explícitamente como error. */
 .fuelle-divider span {
   flex: 1;
   height: 16px;
-  margin: 0 3px;
   background-image: repeating-linear-gradient(100deg,
     var(--fuelle-a) 0 7px, var(--fuelle-b) 7px 9px, var(--fuelle-c) 9px 15px);
   box-shadow: inset 0 1px 0 var(--fuelle-shadow), inset 0 -1px 0 var(--fuelle-shadow);
+}
+/* En oscuro las tapas y la banda son un poco más altas (24/17 vs 22/16) y
+   los tramos del gradiente un poco más anchos (8/2/7 vs 7/2/6) — valores
+   literales de COMPONENTES.md, no una simple reescala del claro. */
+body.is-player .fuelle-divider::before,
+body.is-player .fuelle-divider::after,
+body.tema-oscuro-global .fuelle-divider::before,
+body.tema-oscuro-global .fuelle-divider::after {
+  height: 24px;
+}
+body.is-player .fuelle-divider span,
+body.tema-oscuro-global .fuelle-divider span {
+  height: 17px;
+  background-image: repeating-linear-gradient(100deg,
+    var(--fuelle-a) 0 8px, var(--fuelle-b) 8px 10px, var(--fuelle-c) 10px 17px);
 }
 
 .back-btn {
@@ -389,88 +406,81 @@ input, select, textarea {
 .icon-btn:active { background: var(--bg-card-hover); }
 
 /* Botón grande de play/pausa con forma de bandoneón (ver DECISIONES.md
-   punto 71 — el usuario señaló que faltaba este motivo, diseñado en
-   Claude Design junto con el resto del tema): dos "tapas" con botonera de
-   puntos en los bordes (pseudo-elementos del <button>, mismas variables
-   `--tapa`/`--fuelle-*` que `.fuelle-divider`) y el fuelle plegado de
-   fondo ocupando todo el ancho disponible de `.transport`; el ícono de
-   play/pausa en sí queda como círculo coral centrado con un anillo, sin
-   agregar ningún markup nuevo a player.js — se logra estilando
-   directamente el `<svg>` del ícono, el único hijo real del botón. */
+   punto 71 y punto 80): dos "tapas" con botonera de puntos, el fuelle
+   plegado entre ellas y el play centrado encima — ver DECISIONES.md punto
+   80 para el porqué del cambio: esto REEMPLAZA el intento anterior con
+   pseudo-elementos superpuestos (::before/::after de un solo `<button>`
+   con fondo a todo lo alto) por la estructura de verdad de COMPONENTES.md
+   (`design_handoff_bandogym`, sección 2), copiada literal: dos `<span>`
+   tapa (cada uno con su grilla de 6 puntos reales, no un
+   `radial-gradient`) + un `<span>` fuelle MÁS BAJO que las tapas (74px vs
+   88px — con pseudo-elementos esto no se podía lograr, el fondo del botón
+   no se puede acotar en alto solo en el tramo del medio) + el play como
+   hijo `position:absolute` centrado con el halo `box-shadow` del color de
+   fondo. El markup lo arma `player.js` (`bandoneonPlayHTML()`); ver ahí. */
 .icon-btn-lg {
   position: relative;
   flex: 1;
   width: auto;
   height: 104px;
-  border-radius: var(--radius);
   border: none;
-  background-color: var(--tapa);
-  background-image: repeating-linear-gradient(100deg,
-    var(--fuelle-a) 0 8px, var(--fuelle-b) 8px 10px, var(--fuelle-c) 10px 17px);
-  overflow: hidden;
+  background: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
 }
 .icon-btn-lg:active { filter: brightness(0.92); }
 
-/* Las tapas van A RAS de los bordes del botón (`left:0`/`right:0`, ver
-   DECISIONES.md punto 73 — el usuario avisó que en su celu se veía "raro":
-   con un inset horizontal ahí, se colaba una franja fina del fuelle de
-   fondo entre el borde del botón y la tapa, como un hueco sin querer. El
-   `overflow:hidden` del botón ya redondea la esquina exterior sola, no
-   hace falta que la tapa tenga su propio radio ahí. Vertical SÍ queda con
-   inset (`top`/`bottom:8px`): la tapa es más baja que el botón a
-   propósito, igual que en el archivo original.
-   Ver DECISIONES.md punto 79: SEIS puntos POR TAPA (12 en total) — el
-   punto 78 lo había cambiado a 3 por tapa (6 en total) mal interpretando
-   un comentario del usuario, sin chequear el CSS literal. El archivo
-   original (`bandogym-tema.css`, `.bg-bandoneon__tapa::before`) dice
-   explícito en su propio comentario "botonera: 6 puntos" — y ese
-   `::before` es hijo de UNA tapa (hay dos tapas, una por lado), así que
-   son 6 por lado. Ese `::before` original es una caja de 19×29px
-   CENTRADA dentro de la tapa (34×88px) con el patrón tileado 12×12 dentro
-   de esa caja chica — acá se calculó a mano dónde caen esos mismos 6
-   puntos en coordenadas absolutas de la tapa entera (columnas en x=11px
-   y x=23px — el centro de la caja de 19px avanzado por el margen de
-   centrado; filas en 37.5%/51%/65% de la altura de la tapa — la misma
-   matemática pero para el alto, en porcentaje para que se acomode sola
-   si la altura cambia con el `clamp()` de horizontal), en vez de
-   replicar el tileado en una caja chica (eso fue lo que cortaba puntos
-   en los bordes en el punto 77 cuando el tileado cubría TODA la tapa —
-   acá el problema no se repite porque son posiciones fijas, no un
-   patrón que se repite). */
-.icon-btn-lg::before,
-.icon-btn-lg::after {
-  content: '';
-  position: absolute;
-  top: 8px;
-  bottom: 8px;
+.icon-btn-lg .bg-tapa {
+  flex-shrink: 0;
   width: 34px;
+  height: 88px;
   border-radius: 12px;
-  background-color: var(--tapa);
-  background-repeat: no-repeat;
-  background-image:
-    radial-gradient(circle 3.5px at 11px 37.5%, var(--text-faint) 99%, transparent 100%),
-    radial-gradient(circle 3.5px at 23px 37.5%, var(--text-faint) 99%, transparent 100%),
-    radial-gradient(circle 3.5px at 11px 51%, var(--text-faint) 99%, transparent 100%),
-    radial-gradient(circle 3.5px at 23px 51%, var(--text-faint) 99%, transparent 100%),
-    radial-gradient(circle 3.5px at 11px 65%, var(--text-faint) 99%, transparent 100%),
-    radial-gradient(circle 3.5px at 23px 65%, var(--text-faint) 99%, transparent 100%);
+  background: var(--tapa);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.icon-btn-lg::before { left: 0; }
-.icon-btn-lg::after { right: 0; }
+.icon-btn-lg .bg-dots {
+  display: grid;
+  grid-template-columns: repeat(2, 7px);
+  gap: 5px;
+}
+.icon-btn-lg .bg-dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #8d86a3;
+}
+.icon-btn-lg .bg-fuelle {
+  flex: 1;
+  height: 74px;
+  background-image: repeating-linear-gradient(100deg,
+    var(--fuelle-a) 0 8px, var(--fuelle-b) 8px 10px, var(--fuelle-c) 10px 17px);
+}
 
 /* El círculo de play es en realidad un "cuadrado redondeado" (80×80,
    radio 28px) — ver DECISIONES.md punto 74, se había hecho `border-
    radius:50%` (círculo perfecto) sin chequear la referencia real. */
-.icon-btn-lg svg {
-  position: relative;
-  z-index: 1;
-  width: 28px;
-  height: 28px;
-  padding: 26px;
+.icon-btn-lg .bg-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 80px;
   border-radius: 28px;
   background: var(--wine);
   color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   box-shadow: 0 0 0 5px var(--bg);
+}
+.icon-btn-lg .bg-play svg {
+  width: 28px;
+  height: 28px;
 }
 
 /* ---------- Tarjetas ---------- */
@@ -763,6 +773,25 @@ input, select, textarea {
   color: var(--wine);
 }
 
+/* Pliegues como barra de progreso (ver COMPONENTES.md sección 3): doce
+   paralelogramos que alternan la inclinación (impar -14deg, par +14deg),
+   pegados (`gap:3px`) y con esquina viva — el motivo del fuelle abriéndose,
+   no una barra de progreso lisa. Se usa acá para "cuántos pasos de la
+   rutina de hoy están hechos"; ver `today.js` `paintRoutineProgress()`. */
+.pliegues-bar {
+  display: flex;
+  gap: 3px;
+  margin: 14px 0 4px;
+}
+.pliegues-bar i {
+  flex: 1;
+  height: 14px;
+  background: color-mix(in oklab, var(--gold) 12%, var(--bg-card));
+}
+.pliegues-bar i:nth-child(odd) { transform: skewX(-14deg); }
+.pliegues-bar i:nth-child(even) { transform: skewX(14deg); }
+.pliegues-bar i.filled { background: var(--gold); }
+
 .time-picker {
   display: flex;
   gap: 10px;
@@ -872,6 +901,29 @@ input, select, textarea {
   color: var(--text-dim);
   text-decoration: line-through;
   text-decoration-color: var(--border);
+}
+
+/* Bloque "estado actual" (ver COMPONENTES.md sección 5): el primer paso
+   sin hacer — no es un tono de más, es un tratamiento distinto (borde +
+   relieve SÓLIDO, sin blur) para que sea el ancla visual de la lista. Los
+   chips se invierten adentro (ver `.badge-tipo`, blanco sobre tinta) igual
+   que en el mock; el número de acá es coral (`--wine`), no violeta, para
+   no confundirse con el numerito violeta de los pasos que todavía no
+   llegaron. Solo aplica si el paso no está `done` (ver today.js, se
+   excluyen mutuamente). */
+.step-card.current {
+  background: var(--bg-card);
+  border: 2px solid var(--text);
+  box-shadow: 0 4px 0 var(--text);
+}
+.step-card.current .step-index {
+  background: var(--wine);
+  color: #fff;
+}
+.step-card.current .badge-tipo {
+  background: var(--text);
+  color: #fff;
+  border-color: var(--text);
 }
 
 .step-body { flex: 1; min-width: 0; }
@@ -1738,15 +1790,19 @@ body.is-player .app-shell {
 
   body.is-player .transport { gap: clamp(10px, 2.8vh, 20px); }
   body.is-player .icon-btn { width: clamp(38px, 6.5vh, 56px); height: clamp(38px, 6.5vh, 56px); font-size: clamp(1rem, 2.2vh, 1.3rem); }
-  /* `.icon-btn-lg` (botón de play con forma de bandoneón, ver punto 71) solo
-     clampea el ALTO en horizontal — el ancho sigue siendo `flex:1` (el resto
-     de `.transport`, ya angosto acá) para no perder la forma rectangular
-     ancha. El ícono/tapas se clampean en conjunto para que todo se achique
-     proporcional en pantallas horizontales bajas. */
+  /* `.icon-btn-lg` (botón de play con forma de bandoneón, ver punto 71/80)
+     solo clampea el ALTO en horizontal — el ancho sigue siendo `flex:1` (el
+     resto de `.transport`, ya angosto acá) para no perder la forma
+     rectangular ancha. Cada pieza (tapa/puntos/fuelle/play) se clampea en
+     conjunto, todas con el mismo factor de escala (56/104 ≈ 0.54 en el
+     mínimo) para que se achiquen proporcionales entre sí. */
   body.is-player .icon-btn-lg { height: clamp(56px, 8.5vh, 104px); }
-  body.is-player .icon-btn-lg svg { width: clamp(16px, 3vh, 28px); height: clamp(16px, 3vh, 28px); padding: clamp(12px, 4.2vh, 26px); }
-  body.is-player .icon-btn-lg::before,
-  body.is-player .icon-btn-lg::after { width: clamp(20px, 5vh, 34px); }
+  body.is-player .icon-btn-lg .bg-tapa { width: clamp(18px, 2.8vh, 34px); height: clamp(47px, 7.2vh, 88px); }
+  body.is-player .icon-btn-lg .bg-dots { grid-template-columns: repeat(2, clamp(4px, 0.6vh, 7px)); gap: clamp(3px, 0.4vh, 5px); }
+  body.is-player .icon-btn-lg .bg-dots i { width: clamp(4px, 0.6vh, 7px); height: clamp(4px, 0.6vh, 7px); }
+  body.is-player .icon-btn-lg .bg-fuelle { height: clamp(40px, 6.1vh, 74px); }
+  body.is-player .icon-btn-lg .bg-play { width: clamp(43px, 6.6vh, 80px); height: clamp(43px, 6.6vh, 80px); border-radius: clamp(15px, 2.3vh, 28px); box-shadow: 0 0 0 clamp(3px, 0.4vh, 5px) var(--bg); }
+  body.is-player .icon-btn-lg .bg-play svg { width: clamp(15px, 2.3vh, 28px); height: clamp(15px, 2.3vh, 28px); }
 
   body.is-player .chip,
   body.is-player .chip-row { margin-bottom: 0; }

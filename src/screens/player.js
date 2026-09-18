@@ -50,6 +50,18 @@ const ICON_PAUSE = '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="curr
 const ICON_PREV = '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><rect x="5" y="5" width="2.6" height="14" rx="1"/><path d="M18 6.2v11.6c0 .9-1 1.4-1.7.9l-8-5.8c-.6-.4-.6-1.3 0-1.8l8-5.8c.7-.5 1.7 0 1.7.9z"/></svg>';
 const ICON_NEXT = '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><rect x="16.4" y="5" width="2.6" height="14" rx="1"/><path d="M6 6.2v11.6c0 .9 1 1.4 1.7.9l8-5.8c.6-.4.6-1.3 0-1.8l-8-5.8c-.7-.5-1.7 0-1.7.9z"/></svg>';
 
+// Contenido interno de `#playBtn` (botón `.icon-btn-lg`, ver DECISIONES.md
+// punto 80): dos tapas con su grilla de 6 puntos reales + el fuelle + el
+// play — estructura literal de COMPONENTES.md (design_handoff_bandogym,
+// sección 2), copiada tal cual en vez de simulada con CSS de un solo
+// `<button>` liso (ver styles.css `.icon-btn-lg` para el porqué). El ícono
+// play/pausa vive en `.bg-play`, así el toggle solo reemplaza ESE hijo, no
+// las tapas/fuelle.
+const BANDONEON_DOTS = '<span class="bg-dots"><i></i><i></i><i></i><i></i><i></i><i></i></span>';
+function bandoneonPlayHTML(iconHtml) {
+  return `<span class="bg-tapa">${BANDONEON_DOTS}</span><span class="bg-fuelle"></span><span class="bg-tapa">${BANDONEON_DOTS}</span><span class="bg-play">${iconHtml}</span>`;
+}
+
 // Metrónomo (reemplaza el emoji 🔔, ver DECISIONES.md puntos 52-53): trazo,
 // no relleno, como el resto de los íconos de la familia — cuerpo
 // trapezoidal del metrónomo con el brazo/péndulo a mitad de oscilación.
@@ -182,7 +194,7 @@ function renderFuelle(container, exercise, fromRoute, navigate) {
       </div>
 
       <div class="transport">
-        <button class="icon-btn icon-btn-lg" id="playBtn" aria-label="Reproducir / pausar">${ICON_PLAY}</button>
+        <button class="icon-btn icon-btn-lg" id="playBtn" aria-label="Reproducir / pausar">${bandoneonPlayHTML(ICON_PLAY)}</button>
       </div>
 
       <button class="btn btn-wine" id="finishBtn">Terminar</button>
@@ -205,11 +217,11 @@ function renderFuelle(container, exercise, fromRoute, navigate) {
     playing = !playing;
     if (playing) {
       startedAt = Date.now();
-      playBtn.innerHTML = ICON_PAUSE;
+      playBtn.querySelector('.bg-play').innerHTML = ICON_PAUSE;
       intervalId = setInterval(tick, 200);
     } else {
       elapsedBefore = currentElapsed();
-      playBtn.innerHTML = ICON_PLAY;
+      playBtn.querySelector('.bg-play').innerHTML = ICON_PLAY;
       clearInterval(intervalId);
     }
   }
@@ -374,7 +386,7 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
 
         <div class="transport">
           <button class="icon-btn" id="prevBtn" aria-label="Paso anterior">${ICON_PREV}</button>
-          <button class="icon-btn icon-btn-lg" id="playBtn" aria-label="Reproducir / pausar">${ICON_PLAY}</button>
+          <button class="icon-btn icon-btn-lg" id="playBtn" aria-label="Reproducir / pausar">${bandoneonPlayHTML(ICON_PLAY)}</button>
           <button class="icon-btn" id="nextBtn" aria-label="Paso siguiente">${ICON_NEXT}</button>
         </div>
 
@@ -941,7 +953,7 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   function stopAll() {
     playing = false;
     phase = 'stopped';
-    playBtn.innerHTML = ICON_PLAY;
+    playBtn.querySelector('.bg-play').innerHTML = ICON_PLAY;
     metronome.stop();
     renderSegments();
     updateSystemVisuals(); // apaga barra/atenuado (ver DECISIONES.md punto 58)
@@ -954,7 +966,7 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
       return;
     }
     playing = true;
-    playBtn.innerHTML = ICON_PAUSE;
+    playBtn.querySelector('.bg-play').innerHTML = ICON_PAUSE;
     // Cada vez que se arranca (incluso al reanudar de una pausa) hay cuenta
     // de anticipación: ver DECISIONES.md punto 27.
     phase = 'countin';
