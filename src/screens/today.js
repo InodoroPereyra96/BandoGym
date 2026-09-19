@@ -63,7 +63,7 @@ export function render(container, { navigate }) {
       stepsList.innerHTML = `
         <div class="empty-state card">
           <div class="big-icon">♪</div>
-          <p>Todavía no hay ejercicios cargados para este nivel.<br>Agregá alguno desde "Nuevo".</p>
+          <p>Todavía no hay ejercicios cargados para este nivel.${store.isAdmin() ? '<br>Agregá alguno desde "Nuevo".' : ''}</p>
         </div>`;
       routineProgress.innerHTML = '';
       return;

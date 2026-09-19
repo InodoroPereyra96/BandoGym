@@ -246,7 +246,7 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
     container.innerHTML = `
       <div class="empty-state card">
         <div class="big-icon">🖼</div>
-        <p>Este ejercicio todavía no tiene imágenes cargadas.<br>Agregalas desde "Nuevo ejercicio".</p>
+        <p>Este ejercicio todavía no tiene imágenes cargadas.${store.isAdmin() ? '<br>Agregalas desde "Nuevo ejercicio".' : ''}</p>
         <button class="btn btn-primary" id="volver">Volver</button>
       </div>`;
     container.querySelector('#volver').addEventListener('click', () => navigate(fromRoute === 'hoy' ? '#/hoy' : '#/biblioteca'));

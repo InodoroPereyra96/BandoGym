@@ -106,6 +106,30 @@ export function applyTheme() {
   document.body.classList.toggle('tema-oscuro-global', !!getProfile().temaOscuro);
 }
 
+// ---------- Modo administrador (ver DECISIONES.md punto 82) ----------
+// Muestra u oculta lo que es solo de quien carga contenido (pestaña "Nuevo",
+// botón de editar en Bandoteca). Es una preferencia de PRESENTACIÓN, no
+// seguridad: cualquiera puede activarla desde las herramientas del navegador.
+// Antes de publicar la app a otras personas, cambiar `ADMIN_POR_DEFECTO` a
+// `false` para que una instalación nueva arranque en vista de usuario.
+const ADMIN_POR_DEFECTO = true;
+
+export function isAdmin() {
+  const profile = getProfile();
+  return profile.admin === undefined ? ADMIN_POR_DEFECTO : !!profile.admin;
+}
+
+export function setAdmin(value) {
+  const profile = getProfile();
+  profile.admin = !!value;
+  writeJSON(KEYS.profile, profile);
+  applyAdminMode();
+}
+
+export function applyAdminMode() {
+  document.body.classList.toggle('modo-usuario', !isAdmin());
+}
+
 // ---------- Tiempo total en la app (ver DECISIONES.md punto 69) ----------
 // Acumulado en milisegundos mientras la app está VISIBLE (ver `app.js`,
 // donde se mide) — es la métrica que ordena el ranking de la pestaña

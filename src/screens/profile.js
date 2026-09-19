@@ -55,6 +55,8 @@ export function render(container, { navigate }) {
 
     <div class="section-title">Otras acciones</div>
     <button class="btn btn-outline" id="resetBtn">Reiniciar progreso guardado localmente</button>
+
+    <div id="adminSection" style="margin-top:20px;"></div>
   `;
 
   function paintBackupStatus() {
@@ -121,6 +123,35 @@ export function render(container, { navigate }) {
     store.setTemaOscuro(nuevo); // ya aplica la clase en <body> sola (ver store.applyTheme)
     container.querySelector('#temaOscuroToggle').classList.toggle('active', nuevo);
     toast(nuevo ? 'Tema oscuro activado en toda la app.' : 'Tema oscuro desactivado fuera de Práctica.');
+  });
+
+  // ---------- Modo administrador oculto (ver DECISIONES.md punto 82) ----------
+  // No aparece en la pantalla: se revela tocando 5 veces seguidas (dentro de
+  // 3 segundos) el texto de arriba, y se vuelve a ocultar al salir de Perfil.
+  const adminSection = container.querySelector('#adminSection');
+
+  function paintAdminSection() {
+    const admin = store.isAdmin();
+    adminSection.innerHTML = `
+      <div class="section-title">Modo administrador</div>
+      <button type="button" class="chip chip-block ${admin ? 'active' : ''}" id="adminToggle">🛠 ${admin ? 'Modo administrador activado' : 'Vista de usuario activada'}</button>
+      <p class="field-hint">Activado: se ve "Nuevo" y el botón de editar ejercicios. Desactivado: la app se ve como la vería un usuario.</p>`;
+    adminSection.querySelector('#adminToggle').addEventListener('click', () => {
+      store.setAdmin(!store.isAdmin());
+      paintAdminSection();
+    });
+  }
+
+  let secretTaps = [];
+  container.querySelector('.subtitle').addEventListener('click', () => {
+    const now = Date.now();
+    secretTaps = secretTaps.filter((t) => now - t < 3000);
+    secretTaps.push(now);
+    if (secretTaps.length >= 5) {
+      secretTaps = [];
+      paintAdminSection();
+      adminSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   });
 
   container.querySelector('#resetBtn').addEventListener('click', () => {

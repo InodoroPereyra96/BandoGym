@@ -124,6 +124,13 @@ body.tema-oscuro-global {
 
 * { box-sizing: border-box; }
 
+/* Vista de usuario (ver DECISIONES.md punto 82): oculta lo que es solo para
+   quien carga contenido. La ruta también se bloquea en app.js. */
+body.modo-usuario .tab-btn[data-route="nuevo"],
+body.modo-usuario .card-edit-btn {
+  display: none !important;
+}
+
 /* El atributo `hidden` se implementa vía `[hidden] { display: none }` en la
    hoja de estilos del navegador — y cualquier regla de autor que fije
    `display` en ese mismo elemento (ej. `.icon-btn { display: inline-flex }`)

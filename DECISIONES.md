@@ -4093,3 +4093,40 @@ verificarlo en claro Y en oscuro, no solo en el tema por defecto.
 
 **Verificado en el navegador:** tema oscuro global con rutina de 2 pasos;
 los chips "ESCALA"/"NOTA REPETIDA" del bloque actual se leen bien.
+
+## 82. Modo administrador oculto en Perfil (vista de usuario vs. vista de quien carga contenido)
+
+**Pedido del usuario:** un toggle oculto en Perfil para ir viendo cómo se
+ve la versión final (sin las herramientas de carga), y una pregunta de
+fondo: cómo se maneja esto cuando la app se publique, y si un toggle
+protegido con contraseña es buena idea.
+
+**Decisión:** un flag `admin` guardado en el perfil (`store.isAdmin()`/
+`setAdmin()`/`applyAdminMode()`). Con el modo administrador apagado
+(`body.modo-usuario`) desaparecen la pestaña "Nuevo" y el lápiz de editar
+en Bandoteca, la ruta `#/nuevo`/`#/editar` redirige a Hoy (no se entra ni
+escribiendo la URL) y dos textos que mandaban a "Nuevo" dejan de
+mencionarlo. El toggle NO está a la vista: se revela tocando 5 veces
+seguidas (en 3 segundos) el texto de arriba de Perfil, y se oculta de nuevo
+al salir de la pantalla.
+
+**Por defecto sigue encendido** (`ADMIN_POR_DEFECTO = true` en `store.js`)
+para no cambiarle nada al usuario actual, que es quien carga el contenido.
+
+**Límite importante:** esto es una preferencia de PRESENTACIÓN, no
+seguridad. Toda la app corre en el dispositivo (JS y localStorage a la
+vista), así que cualquier "contraseña" del lado del cliente se saltea
+abriendo las herramientas del navegador. No se agregó contraseña por eso:
+daría una falsa sensación de protección. La protección real exige un
+backend que valide quién puede escribir contenido (ver README, roadmap de
+Comunidad). Además, los ejercicios cargados hoy viven en el localStorage
+de cada dispositivo: los usuarios de una versión publicada no los verían
+sin un catálogo compartido (en el bundle o en un backend).
+
+**Antes de publicar:** cambiar `ADMIN_POR_DEFECTO` a `false`.
+
+**Verificado en el navegador:** el toggle aparece recién al 5.º toque;
+en vista de usuario "Nuevo" y el lápiz se ocultan y `#/nuevo` redirige a
+`#/hoy`; al reactivar el modo administrador todo vuelve. Nota de
+entorno: el service worker cachea en localhost, así que al probar hay que
+desregistrarlo o el preview sirve archivos viejos.

@@ -57,6 +57,12 @@ export function goBack(fallback = '#/hoy') {
 
 function render() {
   const { name, param, query } = parseHash();
+  // En vista de usuario no se puede entrar a cargar/editar ejercicios ni
+  // escribiendo la URL a mano (ver DECISIONES.md punto 82).
+  if (!store.isAdmin() && (name === 'nuevo' || name === 'editar')) {
+    navigate('#/hoy');
+    return;
+  }
   const route = ROUTES[name] || ROUTES.hoy;
 
   if (currentModule && typeof currentModule.destroy === 'function') {
@@ -85,6 +91,7 @@ backBtn.addEventListener('click', () => goBack());
 // guardada, se aplica una sola vez al arrancar — no hace falta repetirlo en
 // cada navegación (ver comentario de `store.applyTheme`).
 store.applyTheme();
+store.applyAdminMode();
 
 window.addEventListener('hashchange', render);
 window.addEventListener('DOMContentLoaded', () => {
