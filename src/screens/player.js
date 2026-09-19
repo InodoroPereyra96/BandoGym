@@ -33,6 +33,7 @@ import { NIVEL_LABEL, ARTICULACION_LABEL, BPM_OPTIONS, BPM_MIN, BPM_MAX, GRUPO_A
 import { toast } from '../ui.js';
 import { createMetronome } from '../metronome.js';
 import { attachPinchZoom } from '../zoom.js';
+import { icon } from '../icons.js';
 import { attachAnnotationLayer, TOOL_PENCIL, TOOL_HIGHLIGHTER, TOOL_ERASER, PENCIL_COLORS } from '../annotate.js';
 
 let cleanupFn = null;
@@ -138,7 +139,7 @@ export function render(container, { param, query, navigate }) {
   if (!exercise) {
     container.innerHTML = `
       <div class="empty-state card">
-        <div class="big-icon">⚠</div>
+        <div class="big-icon">${icon('alert')}</div>
         <p>No se encontró este ejercicio. Puede que haya sido reemplazado.</p>
         <button class="btn btn-primary" id="volver">Volver</button>
       </div>`;
@@ -245,7 +246,7 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   if (pasos.length === 0) {
     container.innerHTML = `
       <div class="empty-state card">
-        <div class="big-icon">🖼</div>
+        <div class="big-icon">${icon('image')}</div>
         <p>Este ejercicio todavía no tiene imágenes cargadas.${store.isAdmin() ? '<br>Agregalas desde "Nuevo ejercicio".' : ''}</p>
         <button class="btn btn-primary" id="volver">Volver</button>
       </div>`;
@@ -363,8 +364,8 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
         <div class="config-block config-block-solo" id="modeBlock">
           <div class="config-label">Modo de avance</div>
           <div class="chip-row chip-row-center" id="modePicker">
-            <button type="button" class="chip" data-mode="auto">🎵 Auto (metrónomo)</button>
-            <button type="button" class="chip" data-mode="manual">✋ Manual</button>
+            <button type="button" class="chip" data-mode="auto">Auto</button>
+            <button type="button" class="chip" data-mode="manual">Manual</button>
           </div>
         </div>
 
@@ -684,7 +685,7 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
         return `
           <div class="audio-chip has-audio">
             <button class="audio-play" data-play="${b}" type="button">▶ ${b}</button>
-            <button class="audio-del icon-btn" data-del="${b}" type="button" aria-label="Quitar audio de ${b} BPM">🗑</button>
+            <button class="audio-del icon-btn" data-del="${b}" type="button" aria-label="Quitar audio de ${b} BPM">${icon('trash')}</button>
           </div>`;
       }
       return `

@@ -10,6 +10,7 @@ import * as store from '../store.js';
 import { NIVELES, NIVEL_LABEL, NIVEL_DESCRIPCION } from '../theory.js';
 import { toast, confirmDialog } from '../ui.js';
 import { todayISO } from '../util.js';
+import { icon } from '../icons.js';
 
 // Cada cuántos días, sin un respaldo nuevo, se muestra el aviso (ver
 // DECISIONES.md ronda 7, punto 37 — por qué 7 días y no otro número).
@@ -35,7 +36,7 @@ export function render(container, { navigate }) {
     <div id="levels"></div>
 
     <div class="section-title">Apariencia</div>
-    <button type="button" class="chip chip-block ${profile.temaOscuro ? 'active' : ''}" id="temaOscuroToggle">🌙 Tema oscuro en toda la app</button>
+    <button type="button" class="chip chip-block ${profile.temaOscuro ? 'active' : ''}" id="temaOscuroToggle">${icon('moon')} Tema oscuro en toda la app</button>
     <p class="field-hint">Práctica siempre usa tema oscuro. Con esto activado, el resto de la app (Hoy, Bandoteca, Nuevo, Comunidad, Perfil) también.</p>
 
     <div class="section-title">Tu progreso</div>
@@ -45,9 +46,9 @@ export function render(container, { navigate }) {
     <div id="backupBanner"></div>
     <p class="field-hint">Todo el contenido (ejercicios, imágenes, audios y progreso) vive solo en este navegador — no hay backend. Exportá un respaldo de vez en cuando para no perderlo.</p>
     <div class="btn-row" style="margin-top:10px;">
-      <button class="btn btn-primary" id="exportBtn">⬇ Exportar respaldo</button>
+      <button class="btn btn-primary" id="exportBtn">${icon('download')} Exportar respaldo</button>
       <label class="btn btn-outline file-btn" style="margin:0;">
-        ⬆ Importar respaldo
+        ${icon('upload')} Importar respaldo
         <input type="file" accept="application/json,.json" id="importInput" hidden />
       </label>
     </div>
@@ -76,7 +77,7 @@ export function render(container, { navigate }) {
         : 'Todavía no hiciste ningún respaldo de tu contenido. Exportá uno ahora para no perderlo.';
       banner.innerHTML = `
         <div class="backup-banner">
-          <span class="banner-icon">💾</span>
+          <span class="banner-icon">${icon('archive')}</span>
           <p>${msg}</p>
         </div>`;
     } else {
@@ -134,7 +135,7 @@ export function render(container, { navigate }) {
     const admin = store.isAdmin();
     adminSection.innerHTML = `
       <div class="section-title">Modo administrador</div>
-      <button type="button" class="chip chip-block ${admin ? 'active' : ''}" id="adminToggle">🛠 ${admin ? 'Modo administrador activado' : 'Vista de usuario activada'}</button>
+      <button type="button" class="chip chip-block ${admin ? 'active' : ''}" id="adminToggle">${icon('wrench')} ${admin ? 'Modo administrador activado' : 'Vista de usuario activada'}</button>
       <p class="field-hint">Activado: se ve "Nuevo" y el botón de editar ejercicios. Desactivado: la app se ve como la vería un usuario.</p>`;
     adminSection.querySelector('#adminToggle').addEventListener('click', () => {
       store.setAdmin(!store.isAdmin());

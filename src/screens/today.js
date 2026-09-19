@@ -6,6 +6,7 @@ import { NIVEL_LABEL, ARTICULACION_LABEL, GRUPO_ARPEGIOS_MENORES, NOMBRE_GRUPO_A
 import { articulacionBadge, tipoBadge, fmtMin, toast } from '../ui.js';
 import { computeGroupDurationMin } from '../data.js';
 import { formatMMSS } from '../util.js';
+import { icon } from '../icons.js';
 
 const TIME_OPTIONS = [15, 30, 45];
 const TIMEBUDGET_KEY = 'fuelle:timeBudget';
@@ -42,7 +43,7 @@ export function render(container, { navigate }) {
     <div class="pliegues-bar" id="routineProgress"></div>
     <div id="stepsList"></div>
 
-    <button class="btn btn-outline btn-sm" id="regenBtn" style="margin-top:6px;">🔄 Rehacer selección de hoy</button>
+    <button class="btn btn-outline btn-sm" id="regenBtn" style="margin-top:6px;">${icon('refresh')} Rehacer selección de hoy</button>
   `;
 
   const stepsList = container.querySelector('#stepsList');
@@ -209,7 +210,7 @@ export function render(container, { navigate }) {
     if (timer.done) {
       timeSection.innerHTML = `
         <button type="button" class="session-timer-btn done" id="sessionTimerBtn">
-          ¡Tiempo cumplido! 🎉
+          <span>${icon('check')} ¡Tiempo cumplido!</span>
           <span class="session-timer-sub">Tocá para elegir de nuevo</span>
         </button>`;
       timeSection.querySelector('#sessionTimerBtn').addEventListener('click', () => {
@@ -220,11 +221,11 @@ export function render(container, { navigate }) {
     }
 
     const label = timer.paused
-      ? `⏸ Pausado — ${formatMMSS(timer.remainingMs / 1000)}`
+      ? `${icon('pause')} Pausado — ${formatMMSS(timer.remainingMs / 1000)}`
       : `¡A estudiar! ${formatMMSS(timer.remainingMs / 1000)}`;
 
     timeSection.innerHTML = `
-      <button type="button" class="session-timer-btn ${timer.paused ? 'paused' : ''}" id="sessionTimerBtn">${label}</button>
+      <button type="button" class="session-timer-btn ${timer.paused ? 'paused' : ''}" id="sessionTimerBtn"><span>${label}</span></button>
       <button type="button" class="session-timer-cancel" id="sessionTimerCancel">Cambiar tiempo</button>`;
 
     timeSection.querySelector('#sessionTimerBtn').addEventListener('click', () => {

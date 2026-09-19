@@ -644,6 +644,20 @@ body.tema-oscuro-global .fuelle-divider span {
 .chip-block {
   width: 100%;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Íconos SVG propios que reemplazan a los emojis (ver DECISIONES.md punto
+   85). Tamaño relativo a la fuente del botón/texto donde estén, y
+   `currentColor` (definido en icons.js) hace que tomen su color. */
+.ico {
+  width: 1.15em;
+  height: 1.15em;
+  flex-shrink: 0;
+  vertical-align: -0.2em;
 }
 
 /* Ver DECISIONES.md punto 58: toggle chico dentro de una fila de paso
@@ -737,6 +751,7 @@ body.tema-oscuro-global .fuelle-divider span {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
 }
 
 .file-preview {
@@ -1430,21 +1445,31 @@ body.tema-oscuro-global .step-card.current .badge-tipo {
    en la referencia, SOLO el picker de Auto/Manual usa este estilo, el de
    15/30/45 min de "Hoy" sigue con chips normales. */
 #modePicker {
-  display: inline-flex;
+  display: flex;
+  width: 100%;
   overflow: visible;
-  gap: 4px;
-  padding: 5px;
-  border-radius: 999px;
-  background: var(--bg-elevated);
+  gap: 6px;
+  padding: 6px;
+  border-radius: 20px;
+  background: var(--bg-card);
 }
+/* Opciones que se reparten todo el ancho, como `.bg-grupo--encajado` del
+   archivo de diseño (52px de alto, radio 15px, activa en negrita 800). El
+   alto se clampea en horizontal para no comerse la pantalla. */
 #modePicker .chip {
+  flex: 1;
+  min-height: clamp(38px, 6.5vh, 52px);
+  border-radius: 15px;
   background: transparent;
   border-color: transparent;
+  color: var(--text-dim);
+  font-size: 1rem;
 }
 #modePicker .chip.active {
   background: var(--gold);
   border-color: var(--gold);
   color: var(--gold-ink);
+  font-weight: 800;
 }
 
 /* ---------- Botones de volumen independientes (ver DECISIONES.md punto 50) ----------

@@ -4186,3 +4186,48 @@ tema, porque flotan sobre la hoja blanca, igual que el botón ⛶.
 (375×812): siguiente/anterior cambian de paso, el play alterna y su ícono
 queda sincronizado con el original, en Manual el play se oculta, y fuera
 de pantalla completa el transporte no aparece. Ejercicio de prueba borrado.
+
+## 85. Emojis del sistema reemplazados por íconos SVG propios
+
+**Pedido del usuario:** sacar los emoticones "por defecto" (que se ven
+distinto en cada teléfono y no combinan con la estética de la app):
+el 🔄 de "Rehacer selección de hoy" por dos flechas circulares violetas,
+el 🎵/✋ de Auto/Manual (que digan solo el texto, "como estaba diseñado
+en Claude Design"), la 🌙 del tema oscuro por una luna dibujada a medida,
+las flechas ⬇/⬆ de exportar/importar respaldo, "y el resto".
+
+**Decisión:** nuevo módulo `src/icons.js` con `icon(nombre)`: SVG de
+24×24, trazo redondeado de 1.8 (los rellenos, como la luna y la pausa,
+con un trazo fino para que no queden cortantes) y `currentColor`, así cada
+ícono toma el color del botón donde está — violeta en claro, ámbar en
+oscuro — sin CSS por ícono. `.ico` en `styles.css` los dimensiona relativos
+a la fuente (1.15em). Íconos: refresh, moon, download, upload, camera,
+image, sparkle, trash, pause, archive, wrench, alert, check.
+
+Reemplazos: 🔄→refresh (Hoy), 🌙→moon, ⬇/⬆→download/upload, 💾→archive
+(aviso de respaldo), 🛠→wrench (modo administrador), 🔧→wrench (Comunidad),
+📷/🖼→camera/image, ✨→sparkle, 🗑→trash (Nuevo/Editar y borrar audio en
+Práctica), ⏸→pause y 🎉→check (temporizador de Hoy), ⚠/🖼→alert/image
+(estados vacíos de Práctica). Auto/Manual pasa a decir solo "Auto" y
+"Manual" (con la mayúscula inicial del diseño, no todo en mayúsculas).
+
+**Auto/Manual, forma:** con textos cortos el selector se achicaba al
+contenido. Ahora es el "grupo encajado" del diseño: ocupa todo el ancho,
+contenedor de radio 20px con padding y gap de 6px, opciones `flex: 1` de
+52px de alto (clampeado en horizontal) con radio 15px, y la activa en 800.
+
+**Lo que NO se tocó:** los símbolos tipográficos de una sola tinta (♪ ✎ ⛶
+✕ ✓ ⇄ ← ↑ ↓) — se ven siempre con la tipografía de la app, no como emoji
+de color, y `⇄` está en el diseño literal.
+
+**Error propio de la pasada:** en `newExercise.js` el botón de eliminar
+estaba en un string de comillas simples dentro de la plantilla; meterle
+`${icon('trash')}` rompió el módulo entero (pantalla en blanco). Se pasó
+a template literal. Se vio de inmediato en la verificación.
+
+**Verificado en el navegador:** Hoy (flechas violetas), Perfil (luna,
+descargar/subir, archivo del aviso, llave del modo administrador), Práctica
+(Auto/Manual en vertical y horizontal), Nuevo/Editar (cámara, tacho),
+Comunidad en oscuro. Ejercicio de prueba y ajustes borrados. Nota de
+entorno: el service worker de localhost sirve archivos viejos; hay que
+desregistrarlo y vaciar cachés antes de probar.

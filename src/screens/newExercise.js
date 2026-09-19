@@ -30,6 +30,7 @@ import {
 } from '../theory.js';
 import { escapeHTML, normalizeNombre } from '../util.js';
 import { toast, confirmDialog } from '../ui.js';
+import { icon } from '../icons.js';
 
 export function render(container, { param, navigate }) {
   const existing = param ? store.getExerciseById(param) : null;
@@ -142,7 +143,7 @@ export function render(container, { param, navigate }) {
       <div class="field" id="fuelleImgField">
         <label>Imagen de referencia (opcional)</label>
         <label class="file-drop" id="fileDrop">
-          📷 Tocar para elegir una imagen
+          ${icon('camera')} Tocar para elegir una imagen
           <input type="file" accept="image/*" id="f-imagen" hidden />
         </label>
         <img id="imgPreview" class="file-preview" src="${fuelleImageDataUrl || ''}" ${fuelleImageDataUrl ? '' : 'hidden'} />
@@ -151,13 +152,13 @@ export function render(container, { param, navigate }) {
       <div class="field" id="pasosField">
         <label>Pasos (imágenes en secuencia)</label>
         <div class="field-hint">Cada paso es una imagen (ej. "La menor", "Mi menor"…). El reproductor los recorre en este orden.</div>
-        <button type="button" class="btn btn-outline btn-sm" id="generarArpegioBtn" hidden style="margin:10px 0;">✨ Generar 12 pasos (una tonalidad por paso)</button>
+        <button type="button" class="btn btn-outline btn-sm" id="generarArpegioBtn" hidden style="margin:10px 0;">${icon('sparkle')} Generar 12 pasos (una tonalidad por paso)</button>
         <div id="pasosList"></div>
         <button type="button" class="btn btn-outline btn-sm" id="addPasoBtn" style="margin-top:8px;">+ Agregar paso</button>
       </div>
 
       <button type="submit" class="btn btn-primary" id="submitBtn">${isEdit ? 'Guardar cambios' : 'Guardar ejercicio'}</button>
-      ${isEdit ? '<button type="button" class="btn btn-wine" id="deleteExerciseBtn" style="margin-top:10px;">🗑 Eliminar ejercicio</button>' : ''}
+      ${isEdit ? `<button type="button" class="btn btn-wine" id="deleteExerciseBtn" style="margin-top:10px;">${icon('trash')} Eliminar ejercicio</button>` : ''}
     </form>
   `;
 
@@ -310,7 +311,7 @@ export function render(container, { param, navigate }) {
         </div>
         <div class="paso-row-body">
           <label class="file-drop file-drop-sm">
-            ${p._imgPreview ? '🖼 Cambiar imagen' : '📷 Agregar imagen'}
+            ${p._imgPreview ? `${icon('image')} Cambiar imagen` : `${icon('camera')} Agregar imagen`}
             <input type="file" accept="image/*" class="paso-img-input" hidden />
           </label>
           ${p._imgPreview ? `<img class="file-preview file-preview-sm" src="${p._imgPreview}" alt="Vista previa" />` : ''}
