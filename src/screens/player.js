@@ -575,10 +575,26 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
     zoomCtl.reset(computeContentTransform(imgEl, scoreFrame));
   }
 
-  function onFsChange() {
-    const isFs = document.fullscreenElement === scoreFrameWrap;
+  // Pantalla completa "de mentira" por CSS (ver DECISIONES.md punto 83): el
+  // iPhone no implementa la API de pantalla completa del navegador para
+  // elementos que no sean video, así que ahí el marco se estira a toda la
+  // ventana con `position: fixed` (clase `pseudo-fs`).
+  let pseudoFs = false;
+
+  function paintFsButton() {
+    const isFs = pseudoFs || document.fullscreenElement === scoreFrameWrap;
     fullscreenBtn.textContent = isFs ? '✕' : '⛶';
     fullscreenBtn.setAttribute('aria-label', isFs ? 'Salir de pantalla completa' : 'Pantalla completa');
+  }
+
+  function setPseudoFs(value) {
+    pseudoFs = value;
+    scoreFrameWrap.classList.toggle('pseudo-fs', value);
+    paintFsButton();
+  }
+
+  function onFsChange() {
+    paintFsButton();
     // El recálculo de tamaño en sí lo dispara `scoreFrameResizeObserver` de
     // abajo, no este handler — ver DECISIONES.md punto 61.
   }
@@ -603,15 +619,19 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
   scoreFrameResizeObserver.observe(scoreFrame);
 
   fullscreenBtn.addEventListener('click', () => {
+    if (pseudoFs) {
+      setPseudoFs(false);
+      return;
+    }
     if (!document.fullscreenElement) {
       const requestFs = scoreFrameWrap.requestFullscreen || scoreFrameWrap.webkitRequestFullscreen;
       if (!requestFs) {
-        toast('Pantalla completa no está disponible en este navegador.');
+        setPseudoFs(true);
         return;
       }
       const result = requestFs.call(scoreFrameWrap);
       if (result && typeof result.catch === 'function') {
-        result.catch(() => toast('No se pudo activar pantalla completa.'));
+        result.catch(() => setPseudoFs(true));
       }
     } else {
       const exitFs = document.exitFullscreen || document.webkitExitFullscreen;

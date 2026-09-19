@@ -1169,7 +1169,8 @@ body.tema-oscuro-global .step-card.current .badge-tipo {
 /* Pantalla completa del marco de partitura: ocupa toda la pantalla del
    dispositivo, con la imagen centrada y a su tamaño máximo posible. */
 .score-frame-wrap:fullscreen,
-.score-frame-wrap:-webkit-full-screen {
+.score-frame-wrap:-webkit-full-screen,
+.score-frame-wrap.pseudo-fs {
   width: 100vw;
   height: 100vh;
   background: #fff;
@@ -1179,8 +1180,22 @@ body.tema-oscuro-global .step-card.current .badge-tipo {
   margin: 0;
 }
 
+/* Respaldo para iPhone (ver DECISIONES.md punto 83): sin la API nativa, el
+   marco se fija sobre toda la ventana, por encima de topbar y tabbar. */
+.score-frame-wrap.pseudo-fs {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  width: 100%;
+  height: 100dvh;
+}
+.score-frame-wrap.pseudo-fs .score-fs-btn {
+  top: calc(env(safe-area-inset-top) + 8px);
+}
+
 .score-frame-wrap:fullscreen .score-frame,
-.score-frame-wrap:-webkit-full-screen .score-frame {
+.score-frame-wrap:-webkit-full-screen .score-frame,
+.score-frame-wrap.pseudo-fs .score-frame {
   max-height: 100vh;
   border: none;
   border-radius: 0;
@@ -1192,9 +1207,12 @@ body.tema-oscuro-global .step-card.current .badge-tipo {
 .score-frame-wrap:fullscreen .score-frame svg,
 .score-frame-wrap:-webkit-full-screen .score-frame img,
 .score-frame-wrap:-webkit-full-screen .score-frame svg,
+.score-frame-wrap.pseudo-fs .score-frame img,
+.score-frame-wrap.pseudo-fs .score-frame svg,
 .score-frame-wrap:fullscreen .score-inner,
-.score-frame-wrap:-webkit-full-screen .score-inner {
-  max-height: 100vh;
+.score-frame-wrap:-webkit-full-screen .score-inner,
+.score-frame-wrap.pseudo-fs .score-inner {
+  max-height: 100dvh;
 }
 
 .tonalidad-label {

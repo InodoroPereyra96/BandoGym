@@ -4130,3 +4130,33 @@ en vista de usuario "Nuevo" y el lápiz se ocultan y `#/nuevo` redirige a
 `#/hoy`; al reactivar el modo administrador todo vuelve. Nota de
 entorno: el service worker cachea en localhost, así que al probar hay que
 desregistrarlo o el preview sirve archivos viejos.
+
+## 83. Pantalla completa de la partitura en iPhone: respaldo por CSS
+
+**Reporte del usuario:** en los ejercicios, el botón de pantalla completa
+(⛶) mostraba "Pantalla completa no está disponible en este navegador".
+
+**Causa:** el botón usaba solo la API del navegador
+(`requestFullscreen`/`webkitRequestFullscreen`) y, si no existía, avisaba
+y no hacía nada. El iPhone no implementa esa API para elementos que no
+sean video (el iPad sí), así que ahí nunca funcionaba. Pasaba desde el
+punto 18, cuando se hizo la función; nunca se había probado en iPhone.
+
+**Decisión:** si la API no existe (o falla), se usa una pantalla
+completa "de mentira": el marco de la partitura recibe la clase
+`pseudo-fs` y se fija sobre toda la ventana (`position: fixed; inset: 0;
+z-index: 100; height: 100dvh`), tapando la barra superior y la de
+pestañas. El botón pasa a ✕ para salir, respeta la zona segura del
+notch (`safe-area-inset-top`) y el lápiz de anotaciones sigue disponible
+porque vive dentro del mismo marco. Donde la API sí existe (Android,
+escritorio, iPad) no cambia nada.
+
+**Límite:** es pantalla completa de la ventana, no del dispositivo: en
+Safari dentro del navegador sigue viéndose la barra de direcciones. En la
+app instalada en la pantalla de inicio (modo standalone) no hay barra, así
+que ahí sí ocupa toda la pantalla.
+
+**Verificado en el navegador:** simulando iPhone (borrando la API nativa)
+en vertical (375×812) y horizontal (812×375): el marco cubre toda la
+ventana, la partitura de prueba pasa de 477×179 a 807×303 y el ✕ sale.
+Ejercicio e imagen de prueba borrados al terminar.
