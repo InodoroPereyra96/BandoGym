@@ -340,6 +340,11 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
       <div class="score-frame-wrap" id="scoreFrameWrap">
         <div class="score-frame" id="scoreFrame"></div>
         <button class="icon-btn score-fs-btn" id="fullscreenBtn" aria-label="Pantalla completa">⛶</button>
+        <div class="fs-transport" id="fsTransport">
+          <button type="button" class="icon-btn" id="fsPrev" aria-label="Paso anterior">${ICON_PREV}</button>
+          <button type="button" class="icon-btn fs-play" id="fsPlay" aria-label="Reproducir / pausar">${ICON_PLAY}</button>
+          <button type="button" class="icon-btn" id="fsNext" aria-label="Paso siguiente">${ICON_NEXT}</button>
+        </div>
         <div class="annotate-widget" id="annotateWidget" hidden>
           <button type="button" class="icon-btn annotate-fab" id="annotateFab" aria-haspopup="true" aria-expanded="false" aria-label="Anotar sobre la partitura">${ICON_PENCIL}</button>
           <div class="annotate-menu" id="annotateMenu" hidden>
@@ -617,6 +622,23 @@ function renderEscalaArpegio(container, exercise, fromRoute, navigate) {
     resizeObserverTimer = setTimeout(applyAutoTransform, 60);
   });
   scoreFrameResizeObserver.observe(scoreFrame);
+
+  // Mini transporte dentro de la pantalla completa (ver DECISIONES.md punto
+  // 84): no tiene lógica propia, delega el toque en los botones de verdad
+  // (`#prevBtn`/`#playBtn`/`#nextBtn`), así siempre hacen exactamente lo
+  // mismo. El ícono y la visibilidad del play se copian del original con un
+  // observador, porque el play cambia desde varios lugares (arrancar, pausar,
+  // fin del ejercicio) y el modo manual lo oculta.
+  const fsPlay = container.querySelector('#fsPlay');
+  container.querySelector('#fsPrev').addEventListener('click', () => container.querySelector('#prevBtn').click());
+  container.querySelector('#fsNext').addEventListener('click', () => container.querySelector('#nextBtn').click());
+  fsPlay.addEventListener('click', () => playBtn.click());
+  function syncFsPlay() {
+    fsPlay.innerHTML = playBtn.querySelector('.bg-play').innerHTML;
+    fsPlay.hidden = playBtn.hidden;
+  }
+  new MutationObserver(syncFsPlay).observe(playBtn, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
+  syncFsPlay();
 
   fullscreenBtn.addEventListener('click', () => {
     if (pseudoFs) {

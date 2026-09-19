@@ -4160,3 +4160,29 @@ que ahí sí ocupa toda la pantalla.
 en vertical (375×812) y horizontal (812×375): el marco cubre toda la
 ventana, la partitura de prueba pasa de 477×179 a 807×303 y el ✕ sale.
 Ejercicio e imagen de prueba borrados al terminar.
+
+## 84. Mini transporte (anterior / play / siguiente) dentro de la pantalla completa
+
+**Pedido del usuario:** al poner la partitura en pantalla completa sobra
+bastante espacio; quería tres botones chicos en el margen derecho (un
+"play" y los de los costados) para no tener que salir cada vez.
+
+**Decisión:** `#fsTransport` vive dentro de `#scoreFrameWrap` (así también
+se ve en la pantalla completa nativa, que solo muestra ese elemento) y
+está oculto salvo en pantalla completa (nativa o `pseudo-fs`, punto 83).
+No tiene lógica propia: cada botón hace `.click()` sobre el botón real
+(`#prevBtn`/`#playBtn`/`#nextBtn`), así no hay dos caminos que puedan
+divergir. El ícono y la visibilidad del play se copian del original con un
+`MutationObserver`, porque el play cambia desde varios lugares (arrancar,
+pausar, fin del ejercicio) y el modo Manual lo oculta — en Manual quedan
+solo anterior/siguiente, como en la pantalla normal.
+
+**Layout:** en horizontal, una columna de 64px a la derecha (el marco de
+la partitura pasa a `flex: 1`); en vertical, donde falta ancho y sobra
+alto, una fila de 72px abajo. Colores fijos (gris claro y coral), no de
+tema, porque flotan sobre la hoja blanca, igual que el botón ⛶.
+
+**Verificado en el navegador:** en horizontal (812×375) y vertical
+(375×812): siguiente/anterior cambian de paso, el play alterna y su ícono
+queda sincronizado con el original, en Manual el play se oculta, y fuera
+de pantalla completa el transporte no aparece. Ejercicio de prueba borrado.

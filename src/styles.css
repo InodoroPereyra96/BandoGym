@@ -1199,8 +1199,69 @@ body.tema-oscuro-global .step-card.current .badge-tipo {
   max-height: 100vh;
   border: none;
   border-radius: 0;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
+  width: auto;
   height: 100%;
+}
+
+/* Mini transporte (anterior / play / siguiente) que solo se ve en pantalla
+   completa (ver DECISIONES.md punto 84): columna angosta a la derecha, en el
+   margen que sobra al agrandar la partitura. Colores fijos, no de tema: como
+   `.score-fs-btn`, flota sobre la hoja blanca. */
+.fs-transport { display: none; }
+.score-frame-wrap:fullscreen .fs-transport,
+.score-frame-wrap:-webkit-full-screen .fs-transport,
+.score-frame-wrap.pseudo-fs .fs-transport {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  gap: 12px;
+  width: 64px;
+}
+.fs-transport .icon-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  border-color: transparent;
+  background: #efeae3;
+  color: #191427;
+  font-size: 1.1rem;
+}
+.fs-transport .fs-play {
+  width: 56px;
+  height: 56px;
+  border-radius: 20px;
+  background: var(--wine);
+  color: #fff;
+  font-size: 1.4rem;
+}
+
+/* En vertical sobra alto y falta ancho: el transporte pasa a una fila abajo. */
+@media (orientation: portrait) {
+  .score-frame-wrap:fullscreen,
+  .score-frame-wrap:-webkit-full-screen,
+  .score-frame-wrap.pseudo-fs {
+    flex-direction: column;
+  }
+  .score-frame-wrap:fullscreen .score-frame,
+  .score-frame-wrap:-webkit-full-screen .score-frame,
+  .score-frame-wrap.pseudo-fs .score-frame {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+  }
+  .score-frame-wrap:fullscreen .fs-transport,
+  .score-frame-wrap:-webkit-full-screen .fs-transport,
+  .score-frame-wrap.pseudo-fs .fs-transport {
+    flex-direction: row;
+    align-self: auto;
+    width: 100%;
+    height: 72px;
+  }
 }
 
 .score-frame-wrap:fullscreen .score-frame img,
