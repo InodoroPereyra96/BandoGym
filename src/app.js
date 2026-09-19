@@ -20,7 +20,7 @@ const ROUTES = {
   biblioteca: { mod: library, title: 'Bandoteca', tab: 'biblioteca' },
   nuevo: { mod: newExercise, title: 'Nuevo ejercicio', tab: 'nuevo' },
   editar: { mod: newExercise, title: 'Editar ejercicio', tab: null },
-  comunidad: { mod: community, title: 'Comunidad', tab: 'comunidad' },
+  comunidad: { mod: community, title: 'Bandocomunidad', tab: 'comunidad' },
   perfil: { mod: profile, title: 'Perfil', tab: 'perfil' },
   practicar: { mod: player, title: 'Práctica', tab: null },
 };

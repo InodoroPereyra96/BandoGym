@@ -13,7 +13,6 @@
 import * as store from '../store.js';
 import { toast } from '../ui.js';
 import { escapeHTML } from '../util.js';
-import { icon } from '../icons.js';
 
 // "Usuarios de fantasía" para previsualizar el ranking (ver DECISIONES.md
 // punto 69) — nombres y tiempos inventados, NO son personas reales. Se van a
@@ -49,14 +48,6 @@ export function render(container, { navigate }) {
   const profile = store.getProfile();
 
   container.innerHTML = `
-    <div class="community-banner card">
-      <strong>${icon('wrench')} Vista previa</strong>
-      <p class="mb-0">Estos son datos de ejemplo. Esta sección todavía no está conectada a
-      un servidor — por ahora es solo para mostrar cómo se vería. Cuando haya
-      más ejercicios cargados, conectamos esto de verdad (login con Google
-      incluido) para que se vea gente real de <strong>BandoComunidad</strong>.</p>
-    </div>
-
     <button type="button" class="btn btn-outline" id="googleLoginBtn">Iniciar sesión con Google</button>
 
     <div class="section-title">Tu Instagram (opcional)</div>

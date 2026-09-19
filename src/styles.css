@@ -2068,14 +2068,9 @@ body.is-player .app-shell {
 }
 
 /* ---------- Comunidad (ver DECISIONES.md punto 69) ----------
-   Vista previa con "usuarios de fantasía": mismo lenguaje visual que el
-   resto de la app (banner tipo `.backup-banner`, tarjetas, dorado/bordó). */
-
-.community-banner {
-  border-color: var(--gold);
-}
-.community-banner strong { color: var(--gold-strong); }
-.community-banner p { margin: 6px 0 0; color: var(--text-dim); font-size: 0.9rem; }
+   Con "usuarios de fantasía" (el cartel de "vista previa" se sacó, ver
+   DECISIONES.md punto 86): mismo lenguaje visual que el resto de la app
+   (tarjetas, dorado/bordó). */
 
 .community-ig-row {
   display: flex;

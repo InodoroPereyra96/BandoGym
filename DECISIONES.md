@@ -4231,3 +4231,27 @@ descargar/subir, archivo del aviso, llave del modo administrador), Práctica
 Comunidad en oscuro. Ejercicio de prueba y ajustes borrados. Nota de
 entorno: el service worker de localhost sirve archivos viejos; hay que
 desregistrarlo y vaciar cachés antes de probar.
+
+## 86. Comunidad sin el cartel de "vista previa" y título "Bandocomunidad"
+
+**Pedido del usuario:** sacar el cartel de vista previa de Comunidad para
+que se vea tal cual se vería en vista de usuario, y cambiar el título de
+la barra superior por "Bandocomunidad".
+
+**Decisión:** se quitó el banner (`.community-banner`) del markup de
+`community.js` y sus reglas de `styles.css`, y el título de la ruta
+`comunidad` en `app.js` pasa a "Bandocomunidad". La etiqueta de la
+pestaña de abajo sigue siendo "Comunidad" (el pedido era solo el título
+superior, y "Bandocomunidad" no entra cómodo en una pestaña de 5).
+
+**Ojo, sigue siendo un mock:** el ranking (Julián, Meli, Cacho) son
+usuarios inventados y "Iniciar sesión con Google" todavía no hace nada
+(avisa con un mensaje). Sin el cartel, una persona real podría creer que
+son datos reales. Hay que resolverlo antes de publicar: conectar el
+backend o esconder la pestaña en la vista de usuario (ver checklist de
+publicación).
+
+**Verificado en el navegador:** título "Bandocomunidad", sin banner (el
+primer elemento es el botón de Google), pestaña inferior intacta.
+Observación: el perfil del navegador embebido tenía `admin: false` y nivel
+Avanzado que no eran de mi prueba — no se tocaron.
