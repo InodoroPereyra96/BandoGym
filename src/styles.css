@@ -925,6 +925,12 @@ body.tema-oscuro-global .fuelle-divider span {
   color: #fff;
   border-color: var(--text);
 }
+/* En oscuro `--text` es blanco: el chip quedaba blanco con texto blanco
+   (invisible, reportado en un iPhone real). Se invierte el texto a tinta. */
+body.is-player .step-card.current .badge-tipo,
+body.tema-oscuro-global .step-card.current .badge-tipo {
+  color: #191427;
+}
 
 .step-body { flex: 1; min-width: 0; }
 

@@ -4068,3 +4068,28 @@ Práctica en vertical (375px) y horizontal (812×375): tapas con grilla
 halo, toggle play/pausa funcionando sin romper el resto del botón. Sin
 errores de consola. Ejercicios y estado de "hoy" de prueba borrados al
 terminar.
+
+## 81. Chips del bloque actual invisibles en tema oscuro (blanco sobre blanco)
+
+**Reporte del usuario:** captura desde un iPhone real, con el tema
+oscuro global activado: en el bloque "actual" de Hoy los chips de
+tipo/articulación se veían como píldoras blancas vacías, sin texto.
+
+**Causa:** el punto 80 definió `.step-card.current .badge-tipo` con
+`background: var(--text)` y `color: #fff`. En claro `--text` es la tinta
+`#191427` (chip oscuro con texto blanco, como en COMPONENTES.md), pero en
+oscuro `--text` vale `#ffffff`, así que quedaba blanco sobre blanco. No lo
+vi en la verificación del punto 80 porque esa prueba fue solo en claro:
+el tema oscuro global (punto 72) también aplica a Hoy y no lo probé ahí.
+
+**Decisión:** en oscuro (`body.is-player`/`body.tema-oscuro-global`) el
+texto del chip pasa a tinta `#191427`, quedando chip blanco con texto
+oscuro, coherente con el borde y el relieve blancos que el bloque actual
+tiene en oscuro. Se buscó el mismo patrón (`background: var(--text)`) en
+el resto de la hoja: era la única instancia.
+
+**Lección:** todo componente nuevo de Hoy/Bandoteca/Nuevo/Perfil hay que
+verificarlo en claro Y en oscuro, no solo en el tema por defecto.
+
+**Verificado en el navegador:** tema oscuro global con rutina de 2 pasos;
+los chips "ESCALA"/"NOTA REPETIDA" del bloque actual se leen bien.
